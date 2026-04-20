@@ -23,7 +23,7 @@
             box-sizing: border-box;
         }
 
-        /* Obszar wyświetlania danych (Mega Duży) */
+        /* Obszar wyświetlania danych */
         .status-display {
             flex: 1;
             display: flex;
@@ -53,7 +53,6 @@
 
         .huge-title {
             font-size: 10vw;
-            /* Bardzo duży tytuł */
             font-weight: bold;
             margin: 10px 0;
             color: #ffffff;
@@ -142,7 +141,8 @@
             <button class="btn btn-play" onclick="sendCmd('play')">⏯️</button>
             <button class="btn" onclick="sendCmd('next')">⏭️</button>
 
-            <button class="btn btn-close" onclick="sendCmd('close')">❌ ZAMKNIJ AKTUALNĄ KARTĘ</button>
+            <button id="btnCloseTabBtn" class="btn btn-close" onclick="sendCmd('close')">❌ ZAMKNIJ AKTUALNĄ
+                KARTĘ</button>
         </div>
     </div>
 
@@ -170,6 +170,7 @@
         const uiSub = document.getElementById('uiSubDisplay');
         const uiNext = document.getElementById('uiNext');
         const nextContainer = document.getElementById('nextContainer');
+        const btnCloseTabBtn = document.getElementById('btnCloseTabBtn');
 
         let myPin = localStorage.getItem('dj_pin');
         if (!myPin) {
@@ -187,31 +188,37 @@
             uiMode.textContent = data.mode ? `TRYB: ${data.mode.toUpperCase()}` : "";
 
             if (data.mode === 'konkurs') {
-                // Tryb Konkursu: Wielki numer + Tytuł
                 uiMain.style.display = 'block';
                 uiMain.className = 'big-number';
                 uiMain.textContent = data.konkursIndex || "1";
 
                 uiSub.className = 'huge-title';
+                // Tytuł z pierwszego ekranu
                 uiSub.textContent = data.currentName || "";
 
                 nextContainer.style.display = 'none';
+                btnCloseTabBtn.style.display = 'none'; // Ukrywanie przycisku
             }
             else if (data.mode === 'loteria') {
                 uiMain.style.display = 'none';
+
                 uiSub.className = 'huge-title';
                 uiSub.textContent = "LOTERIA";
+
                 nextContainer.style.display = 'none';
+                btnCloseTabBtn.style.display = 'none'; // Ukrywanie przycisku
             }
             else {
-                // Tryb Karaoke: Wielki tytuł na środku
                 uiMain.style.display = 'none';
+
                 uiSub.className = 'huge-title';
-                uiSub.style.fontSize = '12vw'; // Jeszcze większy w karaoke
+                uiSub.style.fontSize = '12vw';
+                // Tytuł z drugiego ekranu
                 uiSub.textContent = data.currentName || "Brak utworu";
 
                 nextContainer.style.display = 'block';
                 uiNext.textContent = data.nextName || "-";
+                btnCloseTabBtn.style.display = 'flex'; // Przywrócenie przycisku
             }
         });
 
