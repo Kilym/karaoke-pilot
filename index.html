@@ -1,201 +1,238 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pilot DJ'a</title>
-    
+    <title>Pilot DJ'a - Karaoke</title>
+
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-    
-    <style>
-        /* Stylistyka dopasowana do ekranu telefonu (Ciemny motyw) */
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: #121212; 
-            color: #ffffff; 
-            margin: 0; 
-            padding: 15px; 
-            user-select: none; /* Zapobiega przypadkowemu zaznaczaniu tekstu */
-        }
-        
-        /* Karta statusu (odbieranie danych) */
-        .status-card { 
-            background: #1e1e1e; 
-            padding: 20px; 
-            border-radius: 16px; 
-            border: 1px solid #333; 
-            margin-bottom: 20px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        .mode-badge { 
-            display: inline-block; 
-            padding: 4px 12px; 
-            border-radius: 10px; 
-            font-size: 12px; 
-            font-weight: bold;
-            background: #333; 
-            color: #bb86fc; 
-            margin-bottom: 15px; 
-            text-transform: uppercase;
-        }
-        .label { color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-        .song-title { font-size: 22px; font-weight: bold; margin: 0 0 15px 0; color: #fff; word-wrap: break-word; }
-        .next-song { font-size: 16px; color: #03dac6; font-weight: bold; margin: 0 0 15px 0; }
-        
-        .queue-list { list-style: none; padding: 0; margin: 0; font-size: 14px; color: #aaa; }
-        .queue-list li { padding: 6px 0; border-bottom: 1px solid #2a2a2a; }
-        .queue-list li:last-child { border-bottom: none; }
 
-        /* Przyciski sterujące (wysyłanie komend) */
-        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
-        .btn { 
-            background: #2c2c2c; border: none; color: white; padding: 20px 10px; 
-            border-radius: 12px; font-size: 24px; cursor: pointer; transition: 0.1s; 
-            display: flex; align-items: center; justify-content: center;
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #000000;
+            color: #ffffff;
+            margin: 0;
+            padding: 10px;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
         }
-        .btn:active { background: #bb86fc; color: #000; transform: scale(0.95); }
-        
-        .btn-wide { grid-column: span 3; font-size: 16px; font-weight: bold; padding: 15px; }
-        .btn-blue { background: #1976d2; }
-        .btn-red { background: #d32f2f; }
-        
-        .sfx-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; }
-        .btn-sfx { background: #1e1e1e; border: 1px solid #03dac6; color: #03dac6; font-size: 14px; font-weight: bold; padding: 15px; border-radius: 12px; }
-        .btn-sfx:active { background: #03dac6; color: #000; }
+
+        /* Obszar wyświetlania danych (Mega Duży) */
+        .status-display {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .mode-label {
+            color: #bb86fc;
+            font-size: 4vw;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .big-number {
+            font-size: 35vw;
+            font-weight: 900;
+            line-height: 1;
+            color: #4CAF50;
+            margin: 0;
+            text-shadow: 0 0 30px rgba(76, 175, 80, 0.4);
+        }
+
+        .huge-title {
+            font-size: 10vw;
+            /* Bardzo duży tytuł */
+            font-weight: bold;
+            margin: 10px 0;
+            color: #ffffff;
+            line-height: 1.1;
+            word-wrap: break-word;
+            width: 100%;
+        }
+
+        .label-small {
+            color: #888;
+            font-size: 3vw;
+            text-transform: uppercase;
+            margin-top: 15px;
+        }
+
+        .next-song {
+            font-size: 5vw;
+            color: #03dac6;
+            margin-top: 5px;
+        }
+
+        /* Kontrolki na dole */
+        .bottom-panel {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background: #1e1e1e;
+            border: none;
+            color: white;
+            padding: 25px 0;
+            border-radius: 16px;
+            font-size: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.05s;
+        }
+
+        .btn:active {
+            background: #333;
+            transform: scale(0.95);
+        }
+
+        .btn-play {
+            background: #455a64;
+            font-size: 40px;
+        }
+
+        .btn-close {
+            grid-column: span 3;
+            background: #311b92;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 15px;
+            color: #ff8a80;
+        }
     </style>
 </head>
+
 <body>
 
-    <div class="status-card">
-        <div id="uiMode" class="mode-badge">Ładowanie...</div>
-        
-        <div class="label" id="lblCurrent">Obecnie gra:</div>
-        <div id="uiCurrent" class="song-title">-</div>
-        
-        <div class="label" id="lblNext">Następnie:</div>
-        <div id="uiNext" class="next-song">-</div>
-        
-        <div class="label" id="lblQueue">W kolejce:</div>
-        <ul id="uiQueue" class="queue-list"></ul>
+    <div class="status-display">
+        <div id="uiMode" class="mode-label">Inicjalizacja...</div>
+
+        <div id="uiMainDisplay" class="big-number">-</div>
+
+        <div id="uiSubDisplay" class="huge-title">Czekam na dane</div>
+
+        <div id="nextContainer">
+            <div class="label-small">Następnie:</div>
+            <div id="uiNext" class="next-song">-</div>
+        </div>
     </div>
 
-    <div class="controls">
-        <button class="btn" onclick="sendCmd('prev')">⏮️</button>
-        <button class="btn" onclick="sendCmd('play')">⏯️</button>
-        <button class="btn" onclick="sendCmd('next')">⏭️</button>
-        
-        <button class="btn btn-wide btn-blue" onclick="sendCmd('fullscreen')">📺 PEŁNY EKRAN</button>
-        <button class="btn btn-wide btn-red" onclick="sendCmd('close')">❌ ZAMKNIJ KARTĘ</button>
-    </div>
+    <div class="bottom-panel">
+        <div class="controls-grid">
+            <button class="btn" onclick="sendCmd('prev')">⏮️</button>
+            <button class="btn btn-play" onclick="sendCmd('play')">⏯️</button>
+            <button class="btn" onclick="sendCmd('next')">⏭️</button>
 
-    <div class="sfx-grid">
-        <button class="btn btn-sfx" onclick="sendCmd('sfx', 'brawa')">BRAWA 👏</button>
-        <button class="btn btn-sfx" onclick="sendCmd('sfx', 'aplauz')">APLAUZ 🎉</button>
-        <button class="btn btn-sfx" onclick="sendCmd('sfx', 'smiech')">ŚMIECH 😂</button>
-        <button class="btn btn-sfx" onclick="sendCmd('sfx', 'blad')">BŁĄD ❌</button>
+            <button class="btn btn-close" onclick="sendCmd('close')">❌ ZAMKNIJ AKTUALNĄ KARTĘ</button>
+        </div>
     </div>
 
     <script>
         // ==========================================
-        // 🔥 KONFIGURACJA FIREBASE (WKLEJ SWOJE DANE!)
+        // 🔥 KONFIGURACJA FIREBASE
         // ==========================================
-       const firebaseConfig = {
-  apiKey: "AIzaSyA7Eam7DIBhHG05gBTNGWuFLs2W8eLfqUo",
-  authDomain: "indeksowe-karaoke.firebaseapp.com",
-  databaseURL: "https://indeksowe-karaoke-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "indeksowe-karaoke",
-  storageBucket: "indeksowe-karaoke.firebasestorage.app",
-  messagingSenderId: "456394044590",
-  appId: "1:456394044590:web:1978e917b7674e7bd1293f"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7Eam7DIBhHG05gBTNGWuFLs2W8eLfqUo",
+            authDomain: "indeksowe-karaoke.firebaseapp.com",
+            databaseURL: "https://indeksowe-karaoke-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "indeksowe-karaoke",
+            storageBucket: "indeksowe-karaoke.firebasestorage.app",
+            messagingSenderId: "456394044590",
+            appId: "1:456394044590:web:1978e917b7674e7bd1293f"
+        };
 
 
-      firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-// Elementy interfejsu
-const uiMode = document.getElementById('uiMode');
-const uiCurrent = document.getElementById('uiCurrent');
-const uiNext = document.getElementById('uiNext');
-const uiQueue = document.getElementById('uiQueue');
-const lblCurrent = document.getElementById('lblCurrent');
-const lblNext = document.getElementById('lblNext');
-const lblQueue = document.getElementById('lblQueue');
+        // Elementy UI
+        const uiMode = document.getElementById('uiMode');
+        const uiMain = document.getElementById('uiMainDisplay');
+        const uiSub = document.getElementById('uiSubDisplay');
+        const uiNext = document.getElementById('uiNext');
+        const nextContainer = document.getElementById('nextContainer');
 
-// ==========================================
-// 🔒 SYSTEM LOGOWANIA (PIN)
-// ==========================================
-let myPin = localStorage.getItem('dj_pin');
+        let myPin = localStorage.getItem('dj_pin');
+        if (!myPin) {
+            myPin = prompt("🔒 Podaj PIN DJ-a:");
+            if (myPin) localStorage.setItem('dj_pin', myPin);
+        }
 
-// Jeśli nie ma zapisanego PINu, zapytaj o niego przy uruchomieniu
-if (!myPin) {
-    myPin = prompt("🔒 Podaj tajny PIN dostępu do Pilota DJ-a:");
-    if (myPin) {
-        localStorage.setItem('dj_pin', myPin);
-    } else {
-        alert("Bez podania PINu pilot nie będzie działał!");
-    }
-}
+        // ==========================================
+        // 📥 ODBIERANIE DANYCH
+        // ==========================================
+        db.ref('remote_status').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
 
-// Opcjonalna funkcja resetu PINu (np. gdy ktoś wpisze błędnie)
-function resetPin() {
-    localStorage.removeItem('dj_pin');
-    location.reload();
-}
+            uiMode.textContent = data.mode ? `TRYB: ${data.mode.toUpperCase()}` : "";
 
-// ==========================================
-// 📥 ODBIERANIE DANYCH Z LAPTOPA
-// ==========================================
-db.ref('remote_status').on('value', (snapshot) => {
-    const data = snapshot.val();
-    if (!data) return;
+            if (data.mode === 'konkurs') {
+                // Tryb Konkursu: Wielki numer + Tytuł
+                uiMain.style.display = 'block';
+                uiMain.className = 'big-number';
+                uiMain.textContent = data.konkursIndex || "1";
 
-    uiMode.textContent = "TRYB: " + (data.mode ? data.mode.toUpperCase() : "NIEZNANY");
+                uiSub.className = 'huge-title';
+                uiSub.textContent = data.currentName || "";
 
-    if (data.mode === 'konkurs') {
-        lblCurrent.textContent = "Obecny Numer:"; uiCurrent.textContent = data.konkursIndex || "-";
-        lblNext.style.display = 'none'; uiNext.style.display = 'none';
-        lblQueue.style.display = 'none'; uiQueue.style.display = 'none';
-    } else if (data.mode === 'loteria') {
-        lblCurrent.textContent = "Status:"; uiCurrent.textContent = "Panel Loterii Aktywny";
-        lblNext.style.display = 'none'; uiNext.style.display = 'none';
-        lblQueue.style.display = 'none'; uiQueue.style.display = 'none';
-    } else {
-        lblCurrent.textContent = "Obecnie gra:"; uiCurrent.textContent = data.currentName || "Brak utworu";
-        lblNext.style.display = 'block'; uiNext.style.display = 'block'; uiNext.textContent = data.nextName || "Brak w kolejce";
-        lblQueue.style.display = 'block'; uiQueue.style.display = 'block'; uiQueue.innerHTML = '';
-        if (data.queueList && data.queueList.length > 0) {
-            data.queueList.forEach(song => { let li = document.createElement('li'); li.textContent = song; uiQueue.appendChild(li); });
-        } else { uiQueue.innerHTML = '<li>Kolejka jest pusta</li>'; }
-    }
-});
+                nextContainer.style.display = 'none';
+            }
+            else if (data.mode === 'loteria') {
+                uiMain.style.display = 'none';
+                uiSub.className = 'huge-title';
+                uiSub.textContent = "LOTERIA";
+                nextContainer.style.display = 'none';
+            }
+            else {
+                // Tryb Karaoke: Wielki tytuł na środku
+                uiMain.style.display = 'none';
+                uiSub.className = 'huge-title';
+                uiSub.style.fontSize = '12vw'; // Jeszcze większy w karaoke
+                uiSub.textContent = data.currentName || "Brak utworu";
 
-// ==========================================
-// 📤 WYSYŁANIE KOMEND DO LAPTOPA (Z PINEM)
-// ==========================================
-function sendCmd(action, value = null) {
-    // Upewniamy się, że mamy PIN przed wysłaniem
-    if(!myPin) {
-        alert("Brak kodu PIN!");
-        resetPin();
-        return;
-    }
+                nextContainer.style.display = 'block';
+                uiNext.textContent = data.nextName || "-";
+            }
+        });
 
-    db.ref('remote_cmd').set({
-        action: action,
-        value: value,
-        pin: myPin,          // <--- DODANO: Wysyłamy PIN jako "przepustkę" do bazy
-        ts: Date.now()
-    }).catch((error) => {
-        // Jeśli Firebase Rules odrzuci zapis (zły PIN), pokaże się ten błąd!
-        console.error("Błąd dostępu:", error);
-        alert("Odmowa dostępu! Wpisałeś błędny kod PIN.");
-        resetPin(); // Wymuś ponowne podanie PINu
-    });
-    
-    if (navigator.vibrate) navigator.vibrate(50);
-}
+        // ==========================================
+        // 📤 WYSYŁANIE KOMEND
+        // ==========================================
+        function sendCmd(action, value = null) {
+            if (!myPin) { location.reload(); return; }
+            db.ref('remote_cmd').set({
+                action: action,
+                value: value,
+                pin: myPin,
+                ts: Date.now()
+            }).catch(e => {
+                alert("Błąd PIN!");
+                localStorage.removeItem('dj_pin');
+                location.reload();
+            });
+            if (navigator.vibrate) navigator.vibrate(40);
+        }
     </script>
 </body>
+
 </html>
