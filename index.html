@@ -5,10 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pilot DJ'a - Karaoke</title>
-
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
@@ -23,7 +21,6 @@
             box-sizing: border-box;
         }
 
-        /* Obszar wyświetlania danych */
         .status-display {
             flex: 1;
             display: flex;
@@ -32,6 +29,7 @@
             align-items: center;
             text-align: center;
             padding: 10px;
+            overflow: hidden;
         }
 
         .mode-label {
@@ -54,7 +52,7 @@
         .huge-title {
             font-size: 10vw;
             font-weight: bold;
-            margin: 10px 0;
+            margin: 5px 0;
             color: #ffffff;
             line-height: 1.1;
             word-wrap: break-word;
@@ -63,18 +61,25 @@
 
         .label-small {
             color: #888;
-            font-size: 3vw;
+            font-size: 3.5vw;
             text-transform: uppercase;
-            margin-top: 15px;
+            margin-top: 10px;
+            font-weight: bold;
         }
 
         .next-song {
-            font-size: 5vw;
+            font-size: 6vw;
             color: #03dac6;
-            margin-top: 5px;
+            margin-top: 2px;
+            font-weight: bold;
         }
 
-        /* Kontrolki na dole */
+        .queue-item {
+            font-size: 4.5vw;
+            color: #777;
+            margin-top: 2px;
+        }
+
         .bottom-panel {
             padding-bottom: env(safe-area-inset-bottom);
         }
@@ -96,7 +101,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: transform 0.05s;
         }
 
         .btn:active {
@@ -107,15 +111,6 @@
         .btn-play {
             background: #455a64;
             font-size: 40px;
-        }
-
-        .btn-close {
-            grid-column: span 3;
-            background: #311b92;
-            font-size: 16px;
-            font-weight: bold;
-            padding: 15px;
-            color: #ff8a80;
         }
     </style>
 </head>
@@ -129,27 +124,33 @@
 
         <div id="uiSubDisplay" class="huge-title">Czekam na dane</div>
 
-        <div id="nextContainer">
+        <div id="nextKaraokeContainer">
             <div class="label-small">Następnie:</div>
             <div id="uiNext" class="next-song">-</div>
+            <div class="label-small">W kolejce:</div>
+            <div id="uiQueue" style="margin-top:5px;"></div>
+        </div>
+
+        <div id="nextKonkursContainer"
+            style="margin-top: 20px; border-top: 1px solid #333; width: 100%; padding-top: 10px;">
+            <div class="label-small">Następny w kolejce:</div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 5px;">
+                <span id="uiNextIdx" style="font-size: 10vw; font-weight: 900; color: #fb8c00;">-</span>
+                <span id="uiNextName" style="font-size: 6vw; color: #aaa; text-align: left; flex: 1;">-</span>
+            </div>
         </div>
     </div>
 
-    <div class="bottom-panel">
+    <div id="uiControlPanel" class="bottom-panel">
         <div class="controls-grid">
             <button class="btn" onclick="sendCmd('prev')">⏮️</button>
             <button class="btn btn-play" onclick="sendCmd('play')">⏯️</button>
             <button class="btn" onclick="sendCmd('next')">⏭️</button>
-
-            <button id="btnCloseTabBtn" class="btn btn-close" onclick="sendCmd('close')">❌ ZAMKNIJ AKTUALNĄ
-                KARTĘ</button>
         </div>
     </div>
 
     <script>
-        // ==========================================
-        // 🔥 KONFIGURACJA FIREBASE
-        // ==========================================
+        // UWAGA: Wklej tutaj swoje dane firebaseConfig!
         const firebaseConfig = {
             apiKey: "AIzaSyA7Eam7DIBhHG05gBTNGWuFLs2W8eLfqUo",
             authDomain: "indeksowe-karaoke.firebaseapp.com",
@@ -164,23 +165,20 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Elementy UI
         const uiMode = document.getElementById('uiMode');
         const uiMain = document.getElementById('uiMainDisplay');
         const uiSub = document.getElementById('uiSubDisplay');
         const uiNext = document.getElementById('uiNext');
-        const nextContainer = document.getElementById('nextContainer');
-        const btnCloseTabBtn = document.getElementById('btnCloseTabBtn');
+        const uiQueue = document.getElementById('uiQueue');
+        const uiNextIdx = document.getElementById('uiNextIdx');
+        const uiNextName = document.getElementById('uiNextName');
+        const nextKaraokeContainer = document.getElementById('nextKaraokeContainer');
+        const nextKonkursContainer = document.getElementById('nextKonkursContainer');
+        const uiControlPanel = document.getElementById('uiControlPanel');
 
-        let myPin = localStorage.getItem('dj_pin');
-        if (!myPin) {
-            myPin = prompt("🔒 Podaj PIN DJ-a:");
-            if (myPin) localStorage.setItem('dj_pin', myPin);
-        }
+        let myPin = localStorage.getItem('dj_pin') || prompt("🔒 Podaj PIN DJ-a:");
+        if (myPin) localStorage.setItem('dj_pin', myPin);
 
-        // ==========================================
-        // 📥 ODBIERANIE DANYCH
-        // ==========================================
         db.ref('remote_status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
@@ -189,54 +187,54 @@
 
             if (data.mode === 'konkurs') {
                 uiMain.style.display = 'block';
-                uiMain.className = 'big-number';
                 uiMain.textContent = data.konkursIndex || "1";
-
-                uiSub.className = 'huge-title';
-                // Tytuł z pierwszego ekranu
                 uiSub.textContent = data.currentName || "";
+                uiSub.style.fontSize = '8vw';
 
-                nextContainer.style.display = 'none';
-                btnCloseTabBtn.style.display = 'none'; // Ukrywanie przycisku
+                nextKaraokeContainer.style.display = 'none';
+                nextKonkursContainer.style.display = 'block';
+                uiNextIdx.textContent = data.nextKonkursIndex || "-";
+                uiNextName.textContent = data.nextName || "-";
+
+                uiControlPanel.style.display = 'block'; // Przyciski widoczne w konkursie
             }
             else if (data.mode === 'loteria') {
                 uiMain.style.display = 'none';
-
-                uiSub.className = 'huge-title';
                 uiSub.textContent = "LOTERIA";
+                uiSub.style.fontSize = '15vw';
+                nextKaraokeContainer.style.display = 'none';
+                nextKonkursContainer.style.display = 'none';
 
-                nextContainer.style.display = 'none';
-                btnCloseTabBtn.style.display = 'none'; // Ukrywanie przycisku
+                uiControlPanel.style.display = 'none'; // UKRYTE w loterii
             }
             else {
+                // Tryb Karaoke
                 uiMain.style.display = 'none';
-
-                uiSub.className = 'huge-title';
-                uiSub.style.fontSize = '12vw';
-                // Tytuł z drugiego ekranu
                 uiSub.textContent = data.currentName || "Brak utworu";
+                uiSub.style.fontSize = '12vw';
 
-                nextContainer.style.display = 'block';
+                nextKaraokeContainer.style.display = 'block';
+                nextKonkursContainer.style.display = 'none';
                 uiNext.textContent = data.nextName || "-";
-                btnCloseTabBtn.style.display = 'flex'; // Przywrócenie przycisku
+
+                uiQueue.innerHTML = '';
+                if (data.queueList) {
+                    data.queueList.forEach(song => {
+                        const div = document.createElement('div');
+                        div.className = 'queue-item';
+                        div.textContent = song;
+                        uiQueue.appendChild(div);
+                    });
+                }
+
+                uiControlPanel.style.display = 'none'; // UKRYTE w karaoke
             }
         });
 
-        // ==========================================
-        // 📤 WYSYŁANIE KOMEND
-        // ==========================================
         function sendCmd(action, value = null) {
             if (!myPin) { location.reload(); return; }
-            db.ref('remote_cmd').set({
-                action: action,
-                value: value,
-                pin: myPin,
-                ts: Date.now()
-            }).catch(e => {
-                alert("Błąd PIN!");
-                localStorage.removeItem('dj_pin');
-                location.reload();
-            });
+            db.ref('remote_cmd').set({ action: action, value: value, pin: myPin, ts: Date.now() })
+                .catch(e => { localStorage.removeItem('dj_pin'); location.reload(); });
             if (navigator.vibrate) navigator.vibrate(40);
         }
     </script>
