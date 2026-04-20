@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +8,50 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        button { background: #333; color: white; border: 2px solid #bb86fc; padding: 25px; border-radius: 15px; font-size: 18px; font-weight: bold; }
-        button:active { background: #bb86fc; color: black; transform: scale(0.95); }
-        .full { grid-column: span 2; background: #bb86fc; color: black; }
-        .sfx { border-color: #03dac6; font-size: 14px; }
+        body {
+            background: #121212;
+            color: white;
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        button {
+            background: #333;
+            color: white;
+            border: 2px solid #bb86fc;
+            padding: 25px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        button:active {
+            background: #bb86fc;
+            color: black;
+            transform: scale(0.95);
+        }
+
+        .full {
+            grid-column: span 2;
+            background: #bb86fc;
+            color: black;
+        }
+
+        .sfx {
+            border-color: #03dac6;
+            font-size: 14px;
+        }
     </style>
 </head>
+
 <body>
     <h3>STEROWANIE DJ</h3>
     <div class="grid">
@@ -29,10 +66,13 @@
     <script>
         // TUTAJ WKLEJ SWOJE DANE Z FIREBASE
         const firebaseConfig = {
-            apiKey: "TWÓJ_KLUCZ",
-            databaseURL: "TWÓJ_URL_BAZY",
-            projectId: "TWÓJ_ID",
-            appId: "TWÓJ_APP_ID"
+            apiKey: "AIzaSyA7Eam7DIBhHG05gBTNGWuFLs2W8eLfqUo",
+            authDomain: "indeksowe-karaoke.firebaseapp.com",
+            databaseURL: "https://indeksowe-karaoke-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "indeksowe-karaoke",
+            storageBucket: "indeksowe-karaoke.firebasestorage.app",
+            messagingSenderId: "456394044590",
+            appId: "1:456394044590:web:1978e917b7674e7bd1293f"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -46,4 +86,5 @@
         }
     </script>
 </body>
+
 </html>
