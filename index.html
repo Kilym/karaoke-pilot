@@ -111,85 +111,91 @@
 };
 
 
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+      firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-        // Elementy interfejsu
-        const uiMode = document.getElementById('uiMode');
-        const uiCurrent = document.getElementById('uiCurrent');
-        const uiNext = document.getElementById('uiNext');
-        const uiQueue = document.getElementById('uiQueue');
-        const lblCurrent = document.getElementById('lblCurrent');
-        const lblNext = document.getElementById('lblNext');
-        const lblQueue = document.getElementById('lblQueue');
+// Elementy interfejsu
+const uiMode = document.getElementById('uiMode');
+const uiCurrent = document.getElementById('uiCurrent');
+const uiNext = document.getElementById('uiNext');
+const uiQueue = document.getElementById('uiQueue');
+const lblCurrent = document.getElementById('lblCurrent');
+const lblNext = document.getElementById('lblNext');
+const lblQueue = document.getElementById('lblQueue');
 
-        // ==========================================
-        // 📥 ODBIERANIE DANYCH Z LAPTOPA
-        // ==========================================
-        db.ref('remote_status').on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (!data) return;
+// ==========================================
+// 🔒 SYSTEM LOGOWANIA (PIN)
+// ==========================================
+let myPin = localStorage.getItem('dj_pin');
 
-            // Ustawienie odznaki trybu
-            uiMode.textContent = "TRYB: " + (data.mode ? data.mode.toUpperCase() : "NIEZNANY");
+// Jeśli nie ma zapisanego PINu, zapytaj o niego przy uruchomieniu
+if (!myPin) {
+    myPin = prompt("🔒 Podaj tajny PIN dostępu do Pilota DJ-a:");
+    if (myPin) {
+        localStorage.setItem('dj_pin', myPin);
+    } else {
+        alert("Bez podania PINu pilot nie będzie działał!");
+    }
+}
 
-            // Dostosowanie interfejsu w zależności od trybu pracy
-            if (data.mode === 'konkurs') {
-                lblCurrent.textContent = "Obecny Numer:";
-                uiCurrent.textContent = data.konkursIndex || "-";
-                lblNext.style.display = 'none';
-                uiNext.style.display = 'none';
-                lblQueue.style.display = 'none';
-                uiQueue.style.display = 'none';
-            } 
-            else if (data.mode === 'loteria') {
-                lblCurrent.textContent = "Status:";
-                uiCurrent.textContent = "Panel Loterii Aktywny";
-                lblNext.style.display = 'none';
-                uiNext.style.display = 'none';
-                lblQueue.style.display = 'none';
-                uiQueue.style.display = 'none';
-            } 
-            else {
-                // Tryb Karaoke (Domyślny)
-                lblCurrent.textContent = "Obecnie gra:";
-                uiCurrent.textContent = data.currentName || "Brak utworu";
-                
-                lblNext.style.display = 'block';
-                uiNext.style.display = 'block';
-                uiNext.textContent = data.nextName || "Brak w kolejce";
-                
-                lblQueue.style.display = 'block';
-                uiQueue.style.display = 'block';
-                uiQueue.innerHTML = '';
-                
-                if (data.queueList && data.queueList.length > 0) {
-                    data.queueList.forEach(song => {
-                        let li = document.createElement('li');
-                        li.textContent = song;
-                        uiQueue.appendChild(li);
-                    });
-                } else {
-                    uiQueue.innerHTML = '<li>Kolejka jest pusta</li>';
-                }
-            }
-        });
+// Opcjonalna funkcja resetu PINu (np. gdy ktoś wpisze błędnie)
+function resetPin() {
+    localStorage.removeItem('dj_pin');
+    location.reload();
+}
 
-        // ==========================================
-        // 📤 WYSYŁANIE KOMEND DO LAPTOPA
-        // ==========================================
-        function sendCmd(action, value = null) {
-            db.ref('remote_cmd').set({
-                action: action,
-                value: value,
-                ts: Date.now() // Timestamp gwarantuje, że każda komenda jest unikalna
-            });
-            
-            // Delikatna wibracja przycisku (działa na telefonach z Androidem)
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
-        }
+// ==========================================
+// 📥 ODBIERANIE DANYCH Z LAPTOPA
+// ==========================================
+db.ref('remote_status').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+
+    uiMode.textContent = "TRYB: " + (data.mode ? data.mode.toUpperCase() : "NIEZNANY");
+
+    if (data.mode === 'konkurs') {
+        lblCurrent.textContent = "Obecny Numer:"; uiCurrent.textContent = data.konkursIndex || "-";
+        lblNext.style.display = 'none'; uiNext.style.display = 'none';
+        lblQueue.style.display = 'none'; uiQueue.style.display = 'none';
+    } else if (data.mode === 'loteria') {
+        lblCurrent.textContent = "Status:"; uiCurrent.textContent = "Panel Loterii Aktywny";
+        lblNext.style.display = 'none'; uiNext.style.display = 'none';
+        lblQueue.style.display = 'none'; uiQueue.style.display = 'none';
+    } else {
+        lblCurrent.textContent = "Obecnie gra:"; uiCurrent.textContent = data.currentName || "Brak utworu";
+        lblNext.style.display = 'block'; uiNext.style.display = 'block'; uiNext.textContent = data.nextName || "Brak w kolejce";
+        lblQueue.style.display = 'block'; uiQueue.style.display = 'block'; uiQueue.innerHTML = '';
+        if (data.queueList && data.queueList.length > 0) {
+            data.queueList.forEach(song => { let li = document.createElement('li'); li.textContent = song; uiQueue.appendChild(li); });
+        } else { uiQueue.innerHTML = '<li>Kolejka jest pusta</li>'; }
+    }
+});
+
+// ==========================================
+// 📤 WYSYŁANIE KOMEND DO LAPTOPA (Z PINEM)
+// ==========================================
+function sendCmd(action, value = null) {
+    // Upewniamy się, że mamy PIN przed wysłaniem
+    if(!myPin) {
+        alert("Brak kodu PIN!");
+        resetPin();
+        return;
+    }
+
+    db.ref('remote_cmd').set({
+        action: action,
+        value: value,
+        pin: myPin,          // <--- DODANO: Wysyłamy PIN jako "przepustkę" do bazy
+        ts: Date.now()
+    }).catch((error) => {
+        // Jeśli Firebase Rules odrzuci zapis (zły PIN), pokaże się ten błąd!
+        console.error("Błąd dostępu:", error);
+        alert("Odmowa dostępu! Wpisałeś błędny kod PIN.");
+        resetPin(); // Wymuś ponowne podanie PINu
+    });
+    
+    if (navigator.vibrate) navigator.vibrate(50);
+}
     </script>
 </body>
 </html>
