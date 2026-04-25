@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pilot DJ'a - Diagnostyka</title>
+    <title>Pilot DJ'a - Karaoke</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
@@ -21,36 +21,130 @@
             box-sizing: border-box;
         }
 
-        #debugBar {
-            background: #333;
-            color: #ffeb3b;
-            font-family: monospace;
-            font-size: 3.5vw;
+        .status-display {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
             padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            word-wrap: break-word;
+            overflow: hidden;
         }
 
-        .status-display { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-        .mode-label { color: #bb86fc; font-size: 4vw; margin-bottom: 10px; }
-        .huge-title { font-size: 10vw; font-weight: bold; margin: 5px 0; color: #ffffff; }
-        .bottom-panel { padding-bottom: env(safe-area-inset-bottom); }
-        .controls-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
-        .btn { background: #1e1e1e; border: none; color: white; padding: 25px 0; border-radius: 16px; font-size: 30px; display: flex; align-items: center; justify-content: center; transition: 0.1s; }
-        .btn-play { background: #455a64; font-size: 40px; }
-        .btn.pressed { background: #e53935 !important; transform: scale(0.95); }
-        .btn:disabled { opacity: 0.4; pointer-events: none; }
+        .mode-label {
+            color: #bb86fc;
+            font-size: 4vw;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .big-number {
+            font-size: 35vw;
+            font-weight: 900;
+            line-height: 1;
+            color: #4CAF50;
+            margin: 0;
+            text-shadow: 0 0 30px rgba(76, 175, 80, 0.4);
+        }
+
+        .huge-title {
+            font-size: 10vw;
+            font-weight: bold;
+            margin: 5px 0;
+            color: #ffffff;
+            line-height: 1.1;
+            word-wrap: break-word;
+            width: 100%;
+        }
+
+        .label-small {
+            color: #888;
+            font-size: 3.5vw;
+            text-transform: uppercase;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .next-song {
+            font-size: 6vw;
+            color: #03dac6;
+            margin-top: 2px;
+            font-weight: bold;
+        }
+
+        .queue-item {
+            font-size: 4.5vw;
+            color: #777;
+            margin-top: 2px;
+        }
+
+        .bottom-panel {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background: #1e1e1e;
+            border: none;
+            color: white;
+            padding: 25px 0;
+            border-radius: 16px;
+            font-size: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.1s;
+        }
+
+        .btn-play {
+            background: #455a64;
+            font-size: 40px;
+        }
+
+        .btn.pressed {
+            background: #e53935 !important;
+            transform: scale(0.95);
+        }
+        
+        .btn:disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
     </style>
 </head>
 
 <body>
 
-    <div id="debugBar">DEBUG: Czekam na wciśnięcie przycisku...</div>
-
     <div class="status-display">
         <div id="uiMode" class="mode-label">Inicjalizacja...</div>
+
+        <div id="uiMainDisplay" class="big-number">-</div>
+
         <div id="uiSubDisplay" class="huge-title">Czekam na dane</div>
+
+        <div id="nextKaraokeContainer">
+            <div class="label-small">Następnie:</div>
+            <div id="uiNext" class="next-song">-</div>
+            <div class="label-small">W kolejce:</div>
+            <div id="uiQueue" style="margin-top:5px;"></div>
+        </div>
+
+        <div id="nextKonkursContainer"
+            style="margin-top: 20px; border-top: 1px solid #333; width: 100%; padding-top: 10px;">
+            <div class="label-small">Następny w kolejce:</div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 5px;">
+                <span id="uiNextIdx" style="font-size: 10vw; font-weight: 900; color: #fb8c00;">-</span>
+                <span id="uiNextName" style="font-size: 6vw; color: #aaa; text-align: left; flex: 1;">-</span>
+            </div>
+        </div>
     </div>
 
     <div id="uiControlPanel" class="bottom-panel">
@@ -75,6 +169,17 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        const uiMode = document.getElementById('uiMode');
+        const uiMain = document.getElementById('uiMainDisplay');
+        const uiSub = document.getElementById('uiSubDisplay');
+        const uiNext = document.getElementById('uiNext');
+        const uiQueue = document.getElementById('uiQueue');
+        const uiNextIdx = document.getElementById('uiNextIdx');
+        const uiNextName = document.getElementById('uiNextName');
+        const nextKaraokeContainer = document.getElementById('nextKaraokeContainer');
+        const nextKonkursContainer = document.getElementById('nextKonkursContainer');
+        const uiControlPanel = document.getElementById('uiControlPanel');
+
         let myPin = localStorage.getItem('dj_pin') || prompt("🔒 Podaj PIN DJ-a:");
         if (myPin) localStorage.setItem('dj_pin', myPin);
 
@@ -82,65 +187,96 @@
         let unlockTimeout = null;
         let isPlaying = false; 
 
-        const debugBar = document.getElementById('debugBar');
-
         // Odbieranie statusu bazy od PC
         db.ref('remote_status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
 
-            // Wyświetlanie danych diagnostycznych na żywo
-            if (lastCmdTs !== 0) {
-                debugBar.innerHTML = 
-                    `Wysłano (W telefonie): ${lastCmdTs}<br>` + 
-                    `Odebrano (Z komputera): ${data.lastAckTs || 'BRAK'}<br>` + 
-                    `Status: ${data.lastAckTs === lastCmdTs ? '✅ ZGODNE (Odlokowano)' : '❌ NIEZGODNE / CZEKAM'}`;
-            }
-
-            // NATYCHMIASTOWE ODBLOKOWANIE
+            // NATYCHMIASTOWE ODBLOKOWANIE PRZYCISKÓW PO OTRZYMANIU POTWIERDZENIA
             if (data.lastAckTs && data.lastAckTs === lastCmdTs) {
                 unlockButtons();
             }
 
-            document.getElementById('uiMode').textContent = data.mode ? `TRYB: ${data.mode.toUpperCase()}` : "";
-            document.getElementById('uiSubDisplay').textContent = data.currentName || "Brak utworu";
+            uiMode.textContent = data.mode ? `TRYB: ${data.mode.toUpperCase()}` : "";
+
+            if (data.mode === 'konkurs') {
+                uiMain.style.display = 'block';
+                uiMain.textContent = data.konkursIndex || "1";
+                uiSub.textContent = data.currentName || "";
+                uiSub.style.fontSize = '8vw';
+
+                nextKaraokeContainer.style.display = 'none';
+                nextKonkursContainer.style.display = 'block';
+                uiNextIdx.textContent = data.nextKonkursIndex || "-";
+                uiNextName.textContent = data.nextName || "-";
+                uiControlPanel.style.display = 'block';
+            }
+            else if (data.mode === 'loteria') {
+                uiMain.style.display = 'none';
+                uiSub.textContent = "LOTERIA";
+                uiSub.style.fontSize = '15vw';
+                nextKaraokeContainer.style.display = 'none';
+                nextKonkursContainer.style.display = 'none';
+                uiControlPanel.style.display = 'none';
+            }
+            else {
+                uiMain.style.display = 'none';
+                uiSub.textContent = data.currentName || "Brak utworu";
+                uiSub.style.fontSize = '12vw';
+
+                nextKaraokeContainer.style.display = 'block';
+                nextKonkursContainer.style.display = 'none';
+                uiNext.textContent = data.nextName || "-";
+
+                uiQueue.innerHTML = '';
+                if (data.queueList) {
+                    data.queueList.forEach(song => {
+                        const div = document.createElement('div');
+                        div.className = 'queue-item';
+                        div.textContent = song;
+                        uiQueue.appendChild(div);
+                    });
+                }
+                uiControlPanel.style.display = 'block'; 
+            }
         });
 
         // Wysłanie komendy na PC
         function sendCmd(action, value = null) {
-            if (!myPin) return;
+            if (!myPin) { location.reload(); return; }
 
+            // Natychmiastowa zmiana ikony Play/Pause po stronie telefonu
             if (action === 'play') {
                 isPlaying = !isPlaying;
-                document.getElementById('btnPlay').textContent = isPlaying ? '⏸️' : '▶️';
+                const btnPlay = document.getElementById('btnPlay');
+                if (btnPlay) btnPlay.textContent = isPlaying ? '⏸️' : '▶️';
             }
 
+            // Zablokuj 3 główne przyciski
             const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext'];
             buttonsIds.forEach(id => {
                 const btn = document.getElementById(id);
                 if (btn) btn.disabled = true;
             });
 
+            // Podświetlenie klikniętego na czerwono
             let targetBtn = document.getElementById('btn' + action.charAt(0).toUpperCase() + action.slice(1));
             if (targetBtn) targetBtn.classList.add('pressed');
 
-            // Wysyłamy komendę i zapisujemy jej ID
+            // Standardowe wysłanie czasu
             lastCmdTs = Date.now();
-            
-            debugBar.innerHTML = `Wysłano (W telefonie): ${lastCmdTs}<br>Odebrano (Z komputera): CZEKAM...`;
 
             db.ref('remote_cmd').set({ action: action, value: value, pin: myPin, ts: lastCmdTs })
-                .catch(e => { location.reload(); });
+                .catch(e => { localStorage.removeItem('dj_pin'); location.reload(); });
             
             if (navigator.vibrate) navigator.vibrate(40);
 
+            // Awaryjne odblokowanie po 1.5s (gdyby internet lagował)
             clearTimeout(unlockTimeout);
-            unlockTimeout = setTimeout(() => {
-                debugBar.innerHTML += `<br>⚠️ TIMEOUT (10s) - Wymuszone odblokowanie`;
-                unlockButtons();
-            }, 10000);
+            unlockTimeout = setTimeout(unlockButtons, 1500);
         }
 
+        // Zdejmowanie blokady wizualnej
         function unlockButtons() {
             const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext'];
             buttonsIds.forEach(id => {
@@ -153,4 +289,5 @@
         }
     </script>
 </body>
+
 </html>
