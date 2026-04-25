@@ -111,10 +111,11 @@
 
         /* --- STYLE DLA BLOKADY I AKTYWACJI --- */
         .btn.pressed {
-            background: #e53935 !important; /* Świeci na czerwono */
+            background: #e53935 !important;
+            /* Świeci na czerwono */
             transform: scale(0.95);
         }
-        
+
         .btn:disabled {
             opacity: 0.4;
             pointer-events: none;
@@ -185,10 +186,15 @@
         let lastCmdTs = 0;
         let unlockTimeout = null;
 
-        // Odbieranie statusu bazy (bez statusu play/pause)
+        // Odbieranie statusu bazy
         db.ref('remote_status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
+
+            // NATYCHMIASTOWE ODBLOKOWANIE PRZYCISKÓW
+            if (data.lastAckTs && data.lastAckTs === lastCmdTs) {
+                unlockButtons();
+            }
 
             uiMode.textContent = data.mode ? `TRYB: ${data.mode.toUpperCase()}` : "";
 
@@ -230,7 +236,7 @@
                         uiQueue.appendChild(div);
                     });
                 }
-                uiControlPanel.style.display = 'block'; 
+                uiControlPanel.style.display = 'block';
             }
         });
 
@@ -238,7 +244,7 @@
         function sendCmd(action, btnEl) {
             if (!myPin) { location.reload(); return; }
 
-            // Natychmiastowa, optymistyczna zmiana ikony Play/Pause!
+            // Natychmiastowa, optymistyczna zmiana ikony Play/Pause
             if (action === 'play' && btnEl) {
                 btnEl.textContent = btnEl.textContent.includes('▶️') ? '⏸️' : '▶️';
             }
@@ -251,12 +257,12 @@
             lastCmdTs = Date.now();
             db.ref('remote_cmd').set({ action: action, pin: myPin, ts: lastCmdTs })
                 .catch(e => { localStorage.removeItem('dj_pin'); location.reload(); });
-            
+
             if (navigator.vibrate) navigator.vibrate(40);
 
-            // 3. Fallback: Odblokuj przymusowo po 2.5s (gdyby internet zgubił sygnał zwrotny)
+            // 3. Fallback: Odblokuj przymusowo po 1s (awaryjnie, gdyby PC nie odpisał)
             clearTimeout(unlockTimeout);
-            unlockTimeout = setTimeout(unlockButtons, 2500);
+            unlockTimeout = setTimeout(unlockButtons, 1000);
         }
 
         // Zdejmowanie blokady wizualnej
@@ -265,15 +271,8 @@
                 b.disabled = false;
                 b.classList.remove('pressed');
             });
-        }
-
-        // Odbieranie sygnału ACK (Potwierdzenie od PC)
-        db.ref('remote_ack').on('value', (snap) => {
-            const ack = snap.val();
-            if (ack && ack.ts === lastCmdTs) {
-                unlockButtons();
-            }
-        });
+        } 
     </script>
 </body>
+
 </html>
