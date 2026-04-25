@@ -186,12 +186,12 @@
         let lastCmdTs = 0;
         let unlockTimeout = null;
 
-        // Odbieranie statusu bazy
+        // Odbieranie statusu bazy (BEZ nadpisywania przycisku Play!)
         db.ref('remote_status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
 
-            // NATYCHMIASTOWE ODBLOKOWANIE PRZYCISKÓW
+            // NATYCHMIASTOWE ODBLOKOWANIE PRZYCISKÓW PO POTWIERDZENIU Z PC
             if (data.lastAckTs && data.lastAckTs === lastCmdTs) {
                 unlockButtons();
             }
@@ -236,15 +236,15 @@
                         uiQueue.appendChild(div);
                     });
                 }
-                uiControlPanel.style.display = 'block';
+                uiControlPanel.style.display = 'block'; 
             }
         });
 
-        // Wysyłanie komendy i natychmiastowa reakcja UI
+        // Wysyłanie komendy i natychmiastowa reakcja UI na ślepo
         function sendCmd(action, btnEl) {
             if (!myPin) { location.reload(); return; }
 
-            // Natychmiastowa, optymistyczna zmiana ikony Play/Pause
+            // Natychmiastowa, optymistyczna zmiana ikony Play/Pause po stronie telefonu
             if (action === 'play' && btnEl) {
                 btnEl.textContent = btnEl.textContent.includes('▶️') ? '⏸️' : '▶️';
             }
@@ -253,16 +253,16 @@
             document.querySelectorAll('.btn').forEach(b => b.disabled = true);
             if (btnEl) btnEl.classList.add('pressed');
 
-            // 2. Wyślij timestamp
+            // 2. Wyślij komendę
             lastCmdTs = Date.now();
             db.ref('remote_cmd').set({ action: action, pin: myPin, ts: lastCmdTs })
                 .catch(e => { localStorage.removeItem('dj_pin'); location.reload(); });
-
+            
             if (navigator.vibrate) navigator.vibrate(40);
 
-            // 3. Fallback: Odblokuj przymusowo po 1s (awaryjnie, gdyby PC nie odpisał)
+            // 3. Fallback: Odblokuj przymusowo po 1.5s (1500 ms)
             clearTimeout(unlockTimeout);
-            unlockTimeout = setTimeout(unlockButtons, 1000);
+            unlockTimeout = setTimeout(unlockButtons, 1500);
         }
 
         // Zdejmowanie blokady wizualnej
@@ -271,7 +271,7 @@
                 b.disabled = false;
                 b.classList.remove('pressed');
             });
-        } 
+        }
     </script>
 </body>
 
