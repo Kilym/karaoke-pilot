@@ -237,40 +237,49 @@
             }
         });
 
+      // Wysłanie komendy na PC
         function sendCmd(action, value = null) {
             if (!myPin) { location.reload(); return; }
 
-            // Natychmiastowa zmiana ikony (bez czytania emotikon!)
+            // Natychmiastowa zmiana ikony Play/Pause (Optimistic UI)
             if (action === 'play') {
                 isPlaying = !isPlaying;
-                document.getElementById('btnPlay').textContent = isPlaying ? '⏸️' : '▶️';
+                const btnPlay = document.getElementById('btnPlay');
+                if (btnPlay) btnPlay.textContent = isPlaying ? '⏸️' : '▶️';
             }
 
-            // Blokujemy tylko 3 klawisze, aby uniknąć błędów
+            // 1. Zablokuj przyciski sterowania
             const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext'];
             buttonsIds.forEach(id => {
                 const btn = document.getElementById(id);
                 if (btn) btn.disabled = true;
             });
 
-            // Podświetlenie klikniętego na czerwono
-            let targetBtn = null;
-            if (action === 'prev') targetBtn = document.getElementById('btnPrev');
-            if (action === 'play') targetBtn = document.getElementById('btnPlay');
-            if (action === 'next') targetBtn = document.getElementById('btnNext');
+            // 2. Podświetlenie klikniętego
+            let targetBtn = document.getElementById('btn' + action.charAt(0).toUpperCase() + action.slice(1));
             if (targetBtn) targetBtn.classList.add('pressed');
 
-            // Wysyłamy w 100% oryginalnym formacie, jaki miałeś przed dzisiejszymi zmianami
-            db.ref('remote_cmd').set({ action: action, value: value, pin: myPin, ts: Date.now() })
-                .catch(e => { localStorage.removeItem('dj_pin'); location.reload(); });
+            // 3. Wysyłamy standardowy czas (bez przesunięć)
+            lastCmdTs = Date.now();
+
+            db.ref('remote_cmd').set({ action: action, value: value, pin: myPin, ts: lastCmdTs })
+                .catch(e => { 
+                    console.error("Błąd zapisu:", e);
+                    localStorage.removeItem('dj_pin'); 
+                    location.reload(); 
+                });
             
             if (navigator.vibrate) navigator.vibrate(40);
 
-            // Awaryjne odblokowanie zmienione na 1,5 sekundy (1500ms)
+            // 4. TESTOWY Fallback: 10 sekund (10000 ms)
+            // Jeśli pętla ACK działa, funkcja unlockButtons zostanie wywołana 
+            // znacznie szybciej przez db.ref('remote_status').on(...)
             clearTimeout(unlockTimeout);
-            unlockTimeout = setTimeout(unlockButtons, 1500);
+            unlockTimeout = setTimeout(() => {
+                console.log("Blokada zdjęta przez timeout (10s) - ACK nie dotarło!");
+                unlockButtons();
+            }, 10000);
         }
-
         function unlockButtons() {
             const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext'];
             buttonsIds.forEach(id => {
