@@ -19,7 +19,7 @@
             flex-direction: column;
             height: 100vh;
             box-sizing: border-box;
-            overflow: hidden; /* Zapobiega przewijaniu całego okna przy swipe */
+            overflow: hidden;
         }
 
         /* GÓRNY PASEK ZAKŁADEK */
@@ -64,7 +64,7 @@
     <div id="topBar" class="top-bar" style="display: none;">
         <button id="btnTabOrders" class="top-btn" onclick="toggleTab('orders')" title="Zamówienia">📦</button>
         <button id="btnTabSearch" class="top-btn" onclick="toggleTab('search')" title="Wyszukiwarka">🔍</button>
-        <button id="btnTabList" class="top-btn" onclick="toggleTab('list')" title="Otwwarte Karty">📑</button>
+        <button id="btnTabList" class="top-btn" onclick="toggleTab('list')" title="Otwarte Karty">📑</button>
         <button id="btnTabControls" class="top-btn" onclick="toggleTab('controls')" title="Sterowanie">🎛️</button>
     </div>
 
@@ -121,6 +121,14 @@
                 <span id="uiNextIdx" style="font-size: 10vw; font-weight: 900; color: #fb8c00;">-</span>
                 <span id="uiNextName" style="font-size: 6vw; color: #aaa; text-align: left; flex: 1;">-</span>
             </div>
+            
+            <div id="konkursControls" style="display: none; width: 100%; margin-top: 30px;">
+                <div class="controls-grid" style="margin: 0;">
+                    <button id="btnPrevK" class="btn" style="padding: 10px 0;" onclick="sendCmd('prev')">⏮️</button>
+                    <button id="btnPlayK" class="btn btn-play" style="padding: 10px 0;" onclick="sendCmd('play')">▶️</button>
+                    <button id="btnNextK" class="btn" style="padding: 10px 0;" onclick="sendCmd('next')">⏭️</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -164,6 +172,7 @@
         const nextKonkursContainer = document.getElementById('nextKonkursContainer');
         const topBar = document.getElementById('topBar');
         const autoPlayToggle = document.getElementById('autoPlayToggle');
+        const konkursControls = document.getElementById('konkursControls');
 
         // ==== LOGIKA ZAKŁADEK ====
         function toggleTab(tabName) {
@@ -174,10 +183,10 @@
                 if (t === tabName) {
                     const isVisible = el.style.display === 'block';
                     el.style.display = isVisible ? 'none' : 'block';
-                    btn.classList.toggle('active', !isVisible);
+                    if(btn) btn.classList.toggle('active', !isVisible);
                 } else {
-                    el.style.display = 'none';
-                    btn.classList.remove('active');
+                    if(el) el.style.display = 'none';
+                    if(btn) btn.classList.remove('active');
                 }
             });
         }
@@ -203,14 +212,14 @@
             if (currentIndex === -1) currentIndex = 0;
 
             if (touchEndX < touchStartX - threshold) {
-                // Swipe w lewo -> Następny tryb
                 let nextMode = availableModes[(currentIndex + 1) % availableModes.length];
                 sendCmd('set_mode', nextMode);
+                toggleTab(''); // Chowa menu na przeciągnięcie
             }
             if (touchEndX > touchStartX + threshold) {
-                // Swipe w prawo -> Poprzedni tryb
                 let prevMode = availableModes[(currentIndex - 1 + availableModes.length) % availableModes.length];
                 sendCmd('set_mode', prevMode);
+                toggleTab(''); // Chowa menu na przeciągnięcie
             }
         }
 
@@ -322,8 +331,13 @@
             const data = snapshot.val();
             if (!data) return;
 
+            // Zabezpieczenie przed zachodzeniem paneli przy zmianie trybu z zewnątrz
+            if (data.mode && currentModeInternal !== data.mode) {
+                currentModeInternal = data.mode;
+                toggleTab('');
+            }
+
             const newTitle = data.currentName || "Brak utworu";
-            if (data.mode) currentModeInternal = data.mode;
 
             if (data.hasOwnProperty('autoPlay')) autoPlayToggle.checked = data.autoPlay;
             if (data.hasOwnProperty('openTabs')) renderOpenTabsList(data.openTabs);
@@ -346,6 +360,7 @@
                 uiSub.style.fontSize = '12vw';
                 nextKaraokeContainer.style.display = 'block';
                 nextKonkursContainer.style.display = 'none';
+                konkursControls.style.display = 'none';
                 uiNext.textContent = data.nextName || "-";
 
                 uiQueue.innerHTML = '';
@@ -366,6 +381,7 @@
                 uiSub.style.fontSize = '8vw';
                 nextKaraokeContainer.style.display = 'none';
                 nextKonkursContainer.style.display = 'block';
+                konkursControls.style.display = 'block';
                 document.getElementById('uiNextIdx').textContent = data.nextKonkursIndex || "-";
                 document.getElementById('uiNextName').textContent = data.nextName || "-";
             }
@@ -376,6 +392,7 @@
                 uiSub.style.fontSize = '15vw';
                 nextKaraokeContainer.style.display = 'none';
                 nextKonkursContainer.style.display = 'none';
+                konkursControls.style.display = 'none';
             }
         });
 
@@ -386,10 +403,12 @@
             if (action === 'play') {
                 isPlaying = !isPlaying;
                 const btnPlay = document.getElementById('btnPlay');
+                const btnPlayK = document.getElementById('btnPlayK');
                 if (btnPlay) btnPlay.textContent = isPlaying ? '⏸️' : '▶️';
+                if (btnPlayK) btnPlayK.textContent = isPlaying ? '⏸️' : '▶️';
             }
 
-            const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext'];
+            const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext', 'btnPrevK', 'btnPlayK', 'btnNextK'];
             if(action === 'prev' || action === 'next' || action === 'play') {
                 buttonsIds.forEach(id => {
                     const btn = document.getElementById(id);
@@ -397,8 +416,10 @@
                 });
             }
 
-            let targetBtn = document.getElementById('btn' + action.charAt(0).toUpperCase() + action.slice(1));
-            if (targetBtn) targetBtn.classList.add('pressed');
+            let targetBtn1 = document.getElementById('btn' + action.charAt(0).toUpperCase() + action.slice(1));
+            let targetBtn2 = document.getElementById('btn' + action.charAt(0).toUpperCase() + action.slice(1) + 'K');
+            if (targetBtn1) targetBtn1.classList.add('pressed');
+            if (targetBtn2) targetBtn2.classList.add('pressed');
 
             lastCmdTs = Date.now();
 
@@ -424,13 +445,18 @@
         }
 
         function unlockButtons() {
-            const btnPrev = document.getElementById('btnPrev');
-            const btnPlay = document.getElementById('btnPlay');
-            const btnNext = document.getElementById('btnNext');
-
-            if (btnPlay) { btnPlay.disabled = false; btnPlay.classList.remove('pressed'); }
-            if (btnPrev) { btnPrev.disabled = isPlaying; btnPrev.classList.remove('pressed'); }
-            if (btnNext) { btnNext.disabled = isPlaying; btnNext.classList.remove('pressed'); }
+            ['btnPrev', 'btnPlay', 'btnNext', 'btnPrevK', 'btnPlayK', 'btnNextK'].forEach(id => {
+                let btn = document.getElementById(id);
+                if(btn) {
+                    if (id.includes('Play')) {
+                        btn.disabled = false;
+                        btn.classList.remove('pressed');
+                    } else {
+                        btn.disabled = isPlaying;
+                        btn.classList.remove('pressed');
+                    }
+                }
+            });
         }
     </script>
 </body>
