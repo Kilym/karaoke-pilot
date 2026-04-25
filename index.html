@@ -186,15 +186,30 @@
         let lastCmdTs = 0;
         let unlockTimeout = null;
         let isPlaying = false; 
+        
+        // Zmienne do kontrolowania tytułu po kliknięciu Next/Prev
+        let waitingForSongChange = false;
+        let lastSongName = "";
 
         // Odbieranie statusu bazy od PC
         db.ref('remote_status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
 
-            // NATYCHMIASTOWE ODBLOKOWANIE PRZYCISKÓW PO OTRZYMANIU POTWIERDZENIA
-            if (data.lastAckTs && data.lastAckTs === lastCmdTs) {
-                unlockButtons();
+            const newTitle = data.currentName || "Brak utworu";
+
+            // LOGIKA ODBLOKOWANIA PRZYCISKÓW
+            if (waitingForSongChange) {
+                // Jeśli czekamy na nową piosenkę, odblokuj TYLKO jeśli tytuł faktycznie się zmienił
+                if (newTitle !== lastSongName) {
+                    waitingForSongChange = false;
+                    unlockButtons();
+                }
+            } else {
+                // Standardowe odblokowanie dla Play/Pause natychmiast po ACK z komputera
+                if (data.lastAckTs && data.lastAckTs === lastCmdTs) {
+                    unlockButtons();
+                }
             }
 
             uiMode.textContent = data.mode ? `TRYB: ${data.mode.toUpperCase()}` : "";
@@ -202,12 +217,12 @@
             if (data.mode === 'konkurs') {
                 uiMain.style.display = 'block';
                 uiMain.textContent = data.konkursIndex || "1";
-                uiSub.textContent = data.currentName || "";
+                uiSub.textContent = newTitle;
                 uiSub.style.fontSize = '8vw';
 
                 nextKaraokeContainer.style.display = 'none';
                 nextKonkursContainer.style.display = 'block';
-                uiControlPanel.style.display = 'block'; // Pokaż w Konkursie
+                uiControlPanel.style.display = 'block'; 
                 
                 uiNextIdx.textContent = data.nextKonkursIndex || "-";
                 uiNextName.textContent = data.nextName || "-";
@@ -218,16 +233,16 @@
                 uiSub.style.fontSize = '15vw';
                 nextKaraokeContainer.style.display = 'none';
                 nextKonkursContainer.style.display = 'none';
-                uiControlPanel.style.display = 'none'; // Ukryj w Loterii
+                uiControlPanel.style.display = 'none'; 
             }
             else {
                 uiMain.style.display = 'none';
-                uiSub.textContent = data.currentName || "Brak utworu";
+                uiSub.textContent = newTitle;
                 uiSub.style.fontSize = '12vw';
 
                 nextKaraokeContainer.style.display = 'block';
                 nextKonkursContainer.style.display = 'none';
-                uiControlPanel.style.display = 'none'; // Ukryj w standardowym Karaoke
+                uiControlPanel.style.display = 'none'; 
                 
                 uiNext.textContent = data.nextName || "-";
 
@@ -247,35 +262,46 @@
         function sendCmd(action, value = null) {
             if (!myPin) { location.reload(); return; }
 
-            // Zmiana ikony Play/Pause i logiki odtwarzania
             if (action === 'play') {
                 isPlaying = !isPlaying;
                 const btnPlay = document.getElementById('btnPlay');
                 if (btnPlay) btnPlay.textContent = isPlaying ? '⏸️' : '▶️';
             }
 
-            // Zablokuj 3 główne przyciski na czas wysyłania komendy
+            // Zablokuj 3 główne przyciski
             const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext'];
             buttonsIds.forEach(id => {
                 const btn = document.getElementById(id);
                 if (btn) btn.disabled = true;
             });
 
-            // Podświetlenie klikniętego na czerwono
+            // Podświetlenie klikniętego
             let targetBtn = document.getElementById('btn' + action.charAt(0).toUpperCase() + action.slice(1));
             if (targetBtn) targetBtn.classList.add('pressed');
 
-            // Standardowe wysłanie czasu
             lastCmdTs = Date.now();
+
+            // Ustawienie odpowiedniego trybu czekania w zależności od klikniętego przycisku
+            if (action === 'prev' || action === 'next') {
+                waitingForSongChange = true;
+                lastSongName = uiSub.textContent; // Zapamiętujemy stary tytuł piosenki
+                
+                clearTimeout(unlockTimeout);
+                // Awaryjne odblokowanie (4s) jeśli tab na komputerze będzie się bardzo długo ładował
+                unlockTimeout = setTimeout(() => {
+                    waitingForSongChange = false;
+                    unlockButtons();
+                }, 4000); 
+            } else {
+                waitingForSongChange = false;
+                clearTimeout(unlockTimeout);
+                unlockTimeout = setTimeout(unlockButtons, 1500); // Awaryjnie 1.5s dla Play/Pause
+            }
 
             db.ref('remote_cmd').set({ action: action, value: value, pin: myPin, ts: lastCmdTs })
                 .catch(e => { localStorage.removeItem('dj_pin'); location.reload(); });
             
             if (navigator.vibrate) navigator.vibrate(40);
-
-            // Awaryjne odblokowanie po 1.5s
-            clearTimeout(unlockTimeout);
-            unlockTimeout = setTimeout(unlockButtons, 1500);
         }
 
         // Zdejmowanie blokady wizualnej
@@ -289,7 +315,7 @@
                 btnPlay.classList.remove('pressed');
             }
             
-            // Jeśli muzyka gra, prev i next pozostają zablokowane
+            // Jeśli muzyka jest "odpalona", przewijanie jest nieaktywne do czasu pauzy
             if (btnPrev) {
                 btnPrev.disabled = isPlaying; 
                 btnPrev.classList.remove('pressed');
