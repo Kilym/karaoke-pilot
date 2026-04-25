@@ -53,7 +53,8 @@
         .badge { color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 12px; margin-right: 8px; vertical-align: middle; font-weight: bold; }
         .badge-yt { background: #c62828; }
         .badge-ising { background: #0288d1; }
-        
+        .tiny-btn { background:#444; border:none; color:white; padding:6px; border-radius:4px; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        .tiny-btn:disabled { opacity: 0.2; pointer-events: none; }
         .tab-btn { background:#444; border:none; color:white; padding:8px 12px; border-radius:6px; font-size: 18px; cursor: pointer; }
         .tab-btn:disabled { opacity: 0.2; pointer-events: none; }
     </style>
@@ -301,7 +302,7 @@
             setTimeout(() => { toggleTab(''); }, 700);
         }
 
-        // ==== RENDEROWANIE OTWARTYCH KART ====
+      // ==== RENDEROWANIE OTWARTYCH KART ====
         function renderOpenTabsList(tabs) {
             const container = document.getElementById('openTabsContainer');
             if (!tabs || tabs.length === 0) {
@@ -312,15 +313,16 @@
             let html = '';
             tabs.forEach((t, i) => {
                 html += `
-                <div class="clickable-item" style="display:flex; align-items:center; gap: 12px; cursor: default;">
-                    <div style="display:flex; flex-direction:column; gap: 6px;">
-                        <button class="tab-btn" onclick="sendCmd('move_tab', {id: ${t.id}, dir: -1})" ${i === 0 ? 'disabled' : ''}>▲</button>
-                        <button class="tab-btn" onclick="sendCmd('move_tab', {id: ${t.id}, dir: 1})" ${i === tabs.length-1 ? 'disabled' : ''}>▼</button>
+                <div style="background: #2c2c2c; margin-bottom: 6px; padding: 8px; border-radius: 8px; display:flex; align-items:center; gap: 10px; cursor: default;">
+                    <div style="display:flex; flex-direction:column; gap: 3px;">
+                        <button class="tiny-btn" onclick="sendCmd('move_tab_top', ${t.id})" ${i === 0 ? 'disabled' : ''} title="Na samą górę">⏫</button>
+                        <button class="tiny-btn" onclick="sendCmd('move_tab', {id: ${t.id}, dir: -1})" ${i === 0 ? 'disabled' : ''} title="Wyżej">▲</button>
+                        <button class="tiny-btn" onclick="sendCmd('move_tab', {id: ${t.id}, dir: 1})" ${i === tabs.length-1 ? 'disabled' : ''} title="Niżej">▼</button>
                     </div>
-                    <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; font-weight:bold;">
+                    <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; font-weight:bold; line-height: 1.2;">
                         ${t.title}
                     </div>
-                    <button style="background:#d32f2f; border:none; color:white; padding:12px; border-radius:8px; font-weight:bold; font-size:16px; cursor:pointer;" onclick="sendCmd('close_tab', ${t.id})">✖</button>
+                    <button style="background:#d32f2f; border:none; color:white; padding:10px 12px; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer;" onclick="sendCmd('close_tab', ${t.id})">✖</button>
                 </div>`;
             });
             container.innerHTML = html;
