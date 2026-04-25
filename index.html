@@ -13,12 +13,49 @@
             background: #000000;
             color: #ffffff;
             margin: 0;
-            padding: 10px;
+            padding: 0;
             user-select: none;
             display: flex;
             flex-direction: column;
             height: 100vh;
             box-sizing: border-box;
+        }
+
+        /* GÓRNY PASEK ZAKŁADEK */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: #111;
+            border-bottom: 1px solid #333;
+        }
+        .top-btn {
+            background: #222;
+            color: #ccc;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 12px 10px;
+            font-size: 16px;
+            font-weight: bold;
+            flex: 1;
+            margin: 0 5px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .top-btn.active {
+            background: #4CAF50;
+            color: #000;
+            border-color: #4CAF50;
+        }
+
+        /* ROZWIJANE PANELE */
+        .panel {
+            background: #1a1a1a;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            display: none; 
         }
 
         .status-display {
@@ -30,104 +67,72 @@
             text-align: center;
             padding: 10px;
             overflow: hidden;
+            transition: all 0.3s ease;
         }
 
-        .mode-label {
-            color: #bb86fc;
-            font-size: 4vw;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 10px;
-        }
+        .mode-label { color: #bb86fc; font-size: 4vw; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+        .big-number { font-size: 35vw; font-weight: 900; line-height: 1; color: #4CAF50; margin: 0; text-shadow: 0 0 30px rgba(76, 175, 80, 0.4); }
+        .huge-title { font-size: 10vw; font-weight: bold; margin: 5px 0; color: #ffffff; line-height: 1.1; word-wrap: break-word; width: 100%; }
+        .label-small { color: #888; font-size: 3.5vw; text-transform: uppercase; margin-top: 10px; font-weight: bold; }
+        .next-song { font-size: 6vw; color: #03dac6; margin-top: 2px; font-weight: bold; }
+        .queue-item { font-size: 4.5vw; color: #777; margin-top: 2px; }
 
-        .big-number {
-            font-size: 35vw;
-            font-weight: 900;
-            line-height: 1;
-            color: #4CAF50;
-            margin: 0;
-            text-shadow: 0 0 30px rgba(76, 175, 80, 0.4);
-        }
-
-        .huge-title {
-            font-size: 10vw;
-            font-weight: bold;
-            margin: 5px 0;
-            color: #ffffff;
-            line-height: 1.1;
-            word-wrap: break-word;
-            width: 100%;
-        }
-
-        .label-small {
-            color: #888;
-            font-size: 3.5vw;
-            text-transform: uppercase;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-
-        .next-song {
-            font-size: 6vw;
-            color: #03dac6;
-            margin-top: 2px;
-            font-weight: bold;
-        }
-
-        .queue-item {
-            font-size: 4.5vw;
-            color: #777;
-            margin-top: 2px;
-        }
-
-        .bottom-panel {
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        .controls-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .btn {
-            background: #1e1e1e;
-            border: none;
-            color: white;
-            padding: 25px 0;
-            border-radius: 16px;
-            font-size: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.1s;
-        }
-
-        .btn-play {
-            background: #455a64;
-            font-size: 40px;
-        }
-
-        .btn.pressed {
-            background: #e53935 !important;
-            transform: scale(0.95);
-        }
+        /* KONTROLKI */
+        .controls-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+        .btn { background: #333; border: none; color: white; padding: 20px 0; border-radius: 12px; font-size: 30px; display: flex; align-items: center; justify-content: center; transition: 0.1s; }
+        .btn-play { background: #455a64; font-size: 40px; }
+        .btn.pressed { background: #e53935 !important; transform: scale(0.95); }
+        .btn:disabled { opacity: 0.4; pointer-events: none; }
         
-        .btn:disabled {
-            opacity: 0.4;
-            pointer-events: none;
-        }
+        /* ZAMÓWIENIA */
+        .order-card { background: #2c2c2c; margin-bottom: 10px; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .order-title { font-size: 16px; font-weight: bold; line-height: 1.3; }
+        .order-singer { color: #aaa; font-size: 13px; display: block; margin-top: 4px; }
     </style>
 </head>
 
 <body>
 
+    <div id="topBar" class="top-bar" style="display: none;">
+        <button id="btnTabOrders" class="top-btn" onclick="toggleTab('orders')">📦 Zamówienia</button>
+        <button id="btnTabSearch" class="top-btn" onclick="toggleTab('search')">🔍 Szukaj</button>
+        <button id="btnTabControls" class="top-btn" onclick="toggleTab('controls')">🎛️ Sterowanie</button>
+    </div>
+
+    <div id="tabOrders" class="panel" style="max-height: 60vh; overflow-y: auto;">
+        <button class="btn" style="width: 100%; font-size: 16px; padding: 12px; background: #37474f; margin-bottom: 15px;" onclick="loadOrders()">🔄 Odśwież listę z ostatnich 8h</button>
+        <div id="ordersListRemote" style="text-align: left;">Ładowanie...</div>
+    </div>
+
+    <div id="tabSearch" class="panel">
+        <input type="text" id="searchInputRemote" placeholder="Wpisz tytuł piosenki..." style="width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; border: none; box-sizing: border-box; margin-bottom: 15px;">
+        <div style="display: flex; gap: 10px;">
+            <button class="btn" style="flex:1; font-size: 18px; background: #c62828; padding: 15px;" onclick="submitSearch('yt')">YouTube</button>
+            <button class="btn" style="flex:1; font-size: 18px; background: #ef6c00; padding: 15px;" onclick="submitSearch('ising')">iSing</button>
+        </div>
+    </div>
+
+    <div id="tabControls" class="panel">
+        <div class="controls-grid">
+            <button id="btnPrev" class="btn" onclick="sendCmd('prev')">⏮️</button>
+            <button id="btnPlay" class="btn btn-play" onclick="sendCmd('play')">▶️</button>
+            <button id="btnNext" class="btn" onclick="sendCmd('next')">⏭️</button>
+        </div>
+        <div class="controls-grid" style="grid-template-columns: 1fr 1fr;">
+            <button class="btn" style="font-size: 18px; padding: 15px;" onclick="sendCmd('fullscreen')">🔲 Pełny Ekran</button>
+            <button class="btn" style="font-size: 18px; padding: 15px; background: #b71c1c;" onclick="sendCmd('close')">❌ Zamknij</button>
+        </div>
+        <div style="background: #222; border-radius: 12px; padding: 15px; margin-top: 10px; display: flex; align-items: center; justify-content: center;">
+            <label style="font-size: 20px; font-weight: bold; display: flex; align-items: center; gap: 15px;">
+                <input type="checkbox" id="autoPlayToggle" style="transform: scale(1.8);" onchange="sendCmd('toggle_autoplay', this.checked)">
+                Tryb AutoPlay
+            </label>
+        </div>
+    </div>
+
     <div class="status-display">
         <div id="uiMode" class="mode-label">Inicjalizacja...</div>
-
         <div id="uiMainDisplay" class="big-number">-</div>
-
         <div id="uiSubDisplay" class="huge-title">Czekam na dane</div>
 
         <div id="nextKaraokeContainer">
@@ -137,8 +142,7 @@
             <div id="uiQueue" style="margin-top:5px;"></div>
         </div>
 
-        <div id="nextKonkursContainer"
-            style="margin-top: 20px; border-top: 1px solid #333; width: 100%; padding-top: 10px;">
+        <div id="nextKonkursContainer" style="margin-top: 20px; border-top: 1px solid #333; width: 100%; padding-top: 10px;">
             <div class="label-small">Następny w kolejce:</div>
             <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 5px;">
                 <span id="uiNextIdx" style="font-size: 10vw; font-weight: 900; color: #fb8c00;">-</span>
@@ -147,15 +151,12 @@
         </div>
     </div>
 
-    <div id="uiControlPanel" class="bottom-panel">
-        <div class="controls-grid">
-            <button id="btnPrev" class="btn" onclick="sendCmd('prev')">⏮️</button>
-            <button id="btnPlay" class="btn btn-play" onclick="sendCmd('play')">▶️</button>
-            <button id="btnNext" class="btn" onclick="sendCmd('next')">⏭️</button>
-        </div>
-    </div>
-
     <script>
+        // =====================================
+        // WKLEJ TUTAJ SWÓJ URL Z APPS SCRIPT!
+        // =====================================
+        const APPS_SCRIPT_PROXY_URL = 'https://script.google.com/macros/s/AKfycby6jX7-oA0A5glvgWAthtwtNSruUyIRTU1qtUipj7WXWYTZQHPoFXkmFg9ZFUiVfDWgJw/exec';
+
         const firebaseConfig = {
             apiKey: "AIzaSyA7Eam7DIBhHG05gBTNGWuFLs2W8eLfqUo",
             authDomain: "indeksowe-karaoke.firebaseapp.com",
@@ -169,81 +170,129 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const uiMode = document.getElementById('uiMode');
-        const uiMain = document.getElementById('uiMainDisplay');
-        const uiSub = document.getElementById('uiSubDisplay');
-        const uiNext = document.getElementById('uiNext');
-        const uiQueue = document.getElementById('uiQueue');
-        const uiNextIdx = document.getElementById('uiNextIdx');
-        const uiNextName = document.getElementById('uiNextName');
-        const nextKaraokeContainer = document.getElementById('nextKaraokeContainer');
-        const nextKonkursContainer = document.getElementById('nextKonkursContainer');
-        const uiControlPanel = document.getElementById('uiControlPanel');
-
         let myPin = localStorage.getItem('dj_pin') || prompt("🔒 Podaj PIN DJ-a:");
         if (myPin) localStorage.setItem('dj_pin', myPin);
 
         let lastCmdTs = 0;
         let unlockTimeout = null;
         let isPlaying = false; 
-        
-        // Zmienne do kontrolowania tytułu po kliknięciu Next/Prev
         let waitingForSongChange = false;
         let lastSongName = "";
 
-        // Odbieranie statusu bazy od PC
+        const uiMode = document.getElementById('uiMode');
+        const uiMain = document.getElementById('uiMainDisplay');
+        const uiSub = document.getElementById('uiSubDisplay');
+        const uiNext = document.getElementById('uiNext');
+        const uiQueue = document.getElementById('uiQueue');
+        const nextKaraokeContainer = document.getElementById('nextKaraokeContainer');
+        const nextKonkursContainer = document.getElementById('nextKonkursContainer');
+        const topBar = document.getElementById('topBar');
+        const autoPlayToggle = document.getElementById('autoPlayToggle');
+
+        // ==== LOGIKA ZAKŁADEK ====
+        function toggleTab(tabName) {
+            const tabs = ['orders', 'search', 'controls'];
+            tabs.forEach(t => {
+                const el = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+                const btn = document.getElementById('btnTab' + t.charAt(0).toUpperCase() + t.slice(1));
+                if (t === tabName) {
+                    const isVisible = el.style.display === 'block';
+                    el.style.display = isVisible ? 'none' : 'block';
+                    btn.classList.toggle('active', !isVisible);
+                    if (!isVisible && tabName === 'orders') loadOrders(); 
+                } else {
+                    el.style.display = 'none';
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // ==== POBIERANIE ZAMÓWIEŃ (PRZEZ APPS SCRIPT) ====
+        async function loadOrders() {
+            if (APPS_SCRIPT_PROXY_URL.includes('Wklej_Tutaj')) {
+                alert("Najpierw wklej URL Apps Script w kodzie pilota!");
+                return;
+            }
+
+            const list = document.getElementById('ordersListRemote');
+            list.innerHTML = '<span style="color:#aaa;">Pobieranie z chmury...</span>';
+            try {
+                // Telefon łączy się z darmowym proxy Google zamiast z GitHubem!
+                const res = await fetch(APPS_SCRIPT_PROXY_URL);
+                const gist = await res.json();
+                
+                if (gist.error) throw new Error(gist.error);
+
+                const data = JSON.parse(gist.files['zamowienia.json'].content);
+                const now = Date.now();
+                const eightHoursInMs = 8 * 60 * 60 * 1000;
+                
+                let uniqueOrders = {};
+                data.forEach(o => {
+                    if ((now - (o.id || o.timestamp)) <= eightHoursInMs && !o.zagrane) {
+                        let key = o.tytul.toLowerCase().trim();
+                        if(!uniqueOrders[key]) uniqueOrders[key] = o;
+                    }
+                });
+                
+                let html = '';
+                Object.values(uniqueOrders).forEach(o => {
+                    let safeTitle = o.tytul.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    html += `
+                        <div class="order-card">
+                            <div style="flex:1; padding-right:10px;">
+                                <div class="order-title">${o.tytul}</div>
+                                <span class="order-singer">🎤 ${o.imie || 'Wybór własny'}</span>
+                            </div>
+                            <button class="btn" style="background:#4caf50; padding:15px; border-radius:10px; font-size:24px; min-width:60px;" onclick="sendCmd('play_order', '${safeTitle}')">▶️</button>
+                        </div>
+                    `;
+                });
+                
+                list.innerHTML = html === '' ? '<span style="color:#aaa;">📭 Brak nowych zamówień.</span>' : html;
+            } catch(e) {
+                list.innerHTML = `<span style="color:#ff5252;">❌ Błąd pobierania danych! (${e.message})</span>`;
+            }
+        }
+
+        // ==== OBSŁUGA WYSZUKIWARKI ====
+        function submitSearch(type) {
+            const query = document.getElementById('searchInputRemote').value.trim();
+            if (!query) return;
+            sendCmd(type === 'yt' ? 'search_yt' : 'search_ising', query);
+            document.getElementById('searchInputRemote').value = '';
+            toggleTab('search');
+        }
+
+        // ==== ODBIERANIE DANYCH Z ROZSZERZENIA ====
         db.ref('remote_status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
 
             const newTitle = data.currentName || "Brak utworu";
 
-            // LOGIKA ODBLOKOWANIA PRZYCISKÓW
+            if (data.hasOwnProperty('autoPlay')) {
+                autoPlayToggle.checked = data.autoPlay;
+            }
+
             if (waitingForSongChange) {
-                // Jeśli czekamy na nową piosenkę, odblokuj TYLKO jeśli tytuł faktycznie się zmienił
                 if (newTitle !== lastSongName) {
                     waitingForSongChange = false;
                     unlockButtons();
                 }
-            } else {
-                // Standardowe odblokowanie dla Play/Pause natychmiast po ACK z komputera
-                if (data.lastAckTs && data.lastAckTs === lastCmdTs) {
-                    unlockButtons();
-                }
+            } else if (data.lastAckTs && data.lastAckTs === lastCmdTs) {
+                unlockButtons();
             }
 
             uiMode.textContent = data.mode ? `TRYB: ${data.mode.toUpperCase()}` : "";
 
-            if (data.mode === 'konkurs') {
-                uiMain.style.display = 'block';
-                uiMain.textContent = data.konkursIndex || "1";
-                uiSub.textContent = newTitle;
-                uiSub.style.fontSize = '8vw';
-
-                nextKaraokeContainer.style.display = 'none';
-                nextKonkursContainer.style.display = 'block';
-                uiControlPanel.style.display = 'block'; 
-                
-                uiNextIdx.textContent = data.nextKonkursIndex || "-";
-                uiNextName.textContent = data.nextName || "-";
-            }
-            else if (data.mode === 'loteria') {
-                uiMain.style.display = 'none';
-                uiSub.textContent = "LOTERIA";
-                uiSub.style.fontSize = '15vw';
-                nextKaraokeContainer.style.display = 'none';
-                nextKonkursContainer.style.display = 'none';
-                uiControlPanel.style.display = 'none'; 
-            }
-            else {
+            if (data.mode === 'karaoke') {
+                topBar.style.display = 'flex'; 
                 uiMain.style.display = 'none';
                 uiSub.textContent = newTitle;
                 uiSub.style.fontSize = '12vw';
-
                 nextKaraokeContainer.style.display = 'block';
                 nextKonkursContainer.style.display = 'none';
-                uiControlPanel.style.display = 'none'; 
-                
                 uiNext.textContent = data.nextName || "-";
 
                 uiQueue.innerHTML = '';
@@ -255,10 +304,29 @@
                         uiQueue.appendChild(div);
                     });
                 }
+            } 
+            else if (data.mode === 'konkurs') {
+                topBar.style.display = 'none'; 
+                uiMain.style.display = 'block';
+                uiMain.textContent = data.konkursIndex || "1";
+                uiSub.textContent = newTitle;
+                uiSub.style.fontSize = '8vw';
+                nextKaraokeContainer.style.display = 'none';
+                nextKonkursContainer.style.display = 'block';
+                document.getElementById('uiNextIdx').textContent = data.nextKonkursIndex || "-";
+                document.getElementById('uiNextName').textContent = data.nextName || "-";
+            }
+            else if (data.mode === 'loteria') {
+                topBar.style.display = 'none'; 
+                uiMain.style.display = 'none';
+                uiSub.textContent = "LOTERIA";
+                uiSub.style.fontSize = '15vw';
+                nextKaraokeContainer.style.display = 'none';
+                nextKonkursContainer.style.display = 'none';
             }
         });
 
-        // Wysłanie komendy na PC
+        // ==== WYSYŁANIE KOMEND NA PC ====
         function sendCmd(action, value = null) {
             if (!myPin) { location.reload(); return; }
 
@@ -268,26 +336,22 @@
                 if (btnPlay) btnPlay.textContent = isPlaying ? '⏸️' : '▶️';
             }
 
-            // Zablokuj 3 główne przyciski
             const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext'];
             buttonsIds.forEach(id => {
                 const btn = document.getElementById(id);
                 if (btn) btn.disabled = true;
             });
 
-            // Podświetlenie klikniętego
             let targetBtn = document.getElementById('btn' + action.charAt(0).toUpperCase() + action.slice(1));
             if (targetBtn) targetBtn.classList.add('pressed');
 
             lastCmdTs = Date.now();
 
-            // Ustawienie odpowiedniego trybu czekania w zależności od klikniętego przycisku
-            if (action === 'prev' || action === 'next') {
+            if (action === 'prev' || action === 'next' || action === 'play_order') {
                 waitingForSongChange = true;
-                lastSongName = uiSub.textContent; // Zapamiętujemy stary tytuł piosenki
+                lastSongName = uiSub.textContent; 
                 
                 clearTimeout(unlockTimeout);
-                // Awaryjne odblokowanie (4s) jeśli tab na komputerze będzie się bardzo długo ładował
                 unlockTimeout = setTimeout(() => {
                     waitingForSongChange = false;
                     unlockButtons();
@@ -295,7 +359,7 @@
             } else {
                 waitingForSongChange = false;
                 clearTimeout(unlockTimeout);
-                unlockTimeout = setTimeout(unlockButtons, 1500); // Awaryjnie 1.5s dla Play/Pause
+                unlockTimeout = setTimeout(unlockButtons, 1500);
             }
 
             db.ref('remote_cmd').set({ action: action, value: value, pin: myPin, ts: lastCmdTs })
@@ -304,7 +368,6 @@
             if (navigator.vibrate) navigator.vibrate(40);
         }
 
-        // Zdejmowanie blokady wizualnej
         function unlockButtons() {
             const btnPrev = document.getElementById('btnPrev');
             const btnPlay = document.getElementById('btnPlay');
@@ -315,7 +378,6 @@
                 btnPlay.classList.remove('pressed');
             }
             
-            // Jeśli muzyka jest "odpalona", przewijanie jest nieaktywne do czasu pauzy
             if (btnPrev) {
                 btnPrev.disabled = isPlaying; 
                 btnPrev.classList.remove('pressed');
@@ -327,5 +389,4 @@
         }
     </script>
 </body>
-
 </html>
