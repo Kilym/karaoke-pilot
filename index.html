@@ -207,9 +207,10 @@
 
                 nextKaraokeContainer.style.display = 'none';
                 nextKonkursContainer.style.display = 'block';
+                uiControlPanel.style.display = 'block'; // Pokaż w Konkursie
+                
                 uiNextIdx.textContent = data.nextKonkursIndex || "-";
                 uiNextName.textContent = data.nextName || "-";
-                uiControlPanel.style.display = 'block';
             }
             else if (data.mode === 'loteria') {
                 uiMain.style.display = 'none';
@@ -217,7 +218,7 @@
                 uiSub.style.fontSize = '15vw';
                 nextKaraokeContainer.style.display = 'none';
                 nextKonkursContainer.style.display = 'none';
-                uiControlPanel.style.display = 'none';
+                uiControlPanel.style.display = 'none'; // Ukryj w Loterii
             }
             else {
                 uiMain.style.display = 'none';
@@ -226,6 +227,8 @@
 
                 nextKaraokeContainer.style.display = 'block';
                 nextKonkursContainer.style.display = 'none';
+                uiControlPanel.style.display = 'none'; // Ukryj w standardowym Karaoke
+                
                 uiNext.textContent = data.nextName || "-";
 
                 uiQueue.innerHTML = '';
@@ -237,7 +240,6 @@
                         uiQueue.appendChild(div);
                     });
                 }
-                uiControlPanel.style.display = 'block'; 
             }
         });
 
@@ -245,14 +247,14 @@
         function sendCmd(action, value = null) {
             if (!myPin) { location.reload(); return; }
 
-            // Natychmiastowa zmiana ikony Play/Pause po stronie telefonu
+            // Zmiana ikony Play/Pause i logiki odtwarzania
             if (action === 'play') {
                 isPlaying = !isPlaying;
                 const btnPlay = document.getElementById('btnPlay');
                 if (btnPlay) btnPlay.textContent = isPlaying ? '⏸️' : '▶️';
             }
 
-            // Zablokuj 3 główne przyciski
+            // Zablokuj 3 główne przyciski na czas wysyłania komendy
             const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext'];
             buttonsIds.forEach(id => {
                 const btn = document.getElementById(id);
@@ -271,21 +273,31 @@
             
             if (navigator.vibrate) navigator.vibrate(40);
 
-            // Awaryjne odblokowanie po 1.5s (gdyby internet lagował)
+            // Awaryjne odblokowanie po 1.5s
             clearTimeout(unlockTimeout);
             unlockTimeout = setTimeout(unlockButtons, 1500);
         }
 
         // Zdejmowanie blokady wizualnej
         function unlockButtons() {
-            const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext'];
-            buttonsIds.forEach(id => {
-                const btn = document.getElementById(id);
-                if (btn) {
-                    btn.disabled = false;
-                    btn.classList.remove('pressed');
-                }
-            });
+            const btnPrev = document.getElementById('btnPrev');
+            const btnPlay = document.getElementById('btnPlay');
+            const btnNext = document.getElementById('btnNext');
+
+            if (btnPlay) {
+                btnPlay.disabled = false;
+                btnPlay.classList.remove('pressed');
+            }
+            
+            // Jeśli muzyka gra, prev i next pozostają zablokowane
+            if (btnPrev) {
+                btnPrev.disabled = isPlaying; 
+                btnPrev.classList.remove('pressed');
+            }
+            if (btnNext) {
+                btnNext.disabled = isPlaying;
+                btnNext.classList.remove('pressed');
+            }
         }
     </script>
 </body>
