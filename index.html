@@ -406,6 +406,14 @@
                 const btnPlayK = document.getElementById('btnPlayK');
                 if (btnPlay) btnPlay.textContent = isPlaying ? '⏸️' : '▶️';
                 if (btnPlayK) btnPlayK.textContent = isPlaying ? '⏸️' : '▶️';
+            } 
+            // NOWE: Resetowanie stanu po zamknięciu karty lub zmianie piosenki
+            else if (action === 'close' || action === 'close_tab' || action === 'prev' || action === 'next' || action === 'play_order') {
+                isPlaying = false;
+                const btnPlay = document.getElementById('btnPlay');
+                const btnPlayK = document.getElementById('btnPlayK');
+                if (btnPlay) btnPlay.textContent = '▶️';
+                if (btnPlayK) btnPlayK.textContent = '▶️';
             }
 
             const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext', 'btnPrevK', 'btnPlayK', 'btnNextK'];
