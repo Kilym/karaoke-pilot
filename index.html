@@ -101,7 +101,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.1s, transform 0.1s, opacity 0.2s;
+            transition: 0.1s;
         }
 
         .btn-play {
@@ -109,13 +109,12 @@
             font-size: 40px;
         }
 
-        /* --- STYLE DLA BLOKADY I AKTYWACJI --- */
+        /* --- Blokada przycisków --- */
         .btn.pressed {
             background: #e53935 !important;
-            /* Świeci na czerwono */
             transform: scale(0.95);
         }
-
+        
         .btn:disabled {
             opacity: 0.4;
             pointer-events: none;
@@ -127,7 +126,9 @@
 
     <div class="status-display">
         <div id="uiMode" class="mode-label">Inicjalizacja...</div>
+
         <div id="uiMainDisplay" class="big-number">-</div>
+
         <div id="uiSubDisplay" class="huge-title">Czekam na dane</div>
 
         <div id="nextKaraokeContainer">
@@ -149,9 +150,9 @@
 
     <div id="uiControlPanel" class="bottom-panel">
         <div class="controls-grid">
-            <button class="btn" onclick="sendCmd('prev', this)">⏮️</button>
-            <button class="btn btn-play" onclick="sendCmd('play', this)">▶️</button>
-            <button class="btn" onclick="sendCmd('next', this)">⏭️</button>
+            <button id="btnPrev" class="btn" onclick="sendCmd('prev')">⏮️</button>
+            <button id="btnPlay" class="btn btn-play" onclick="sendCmd('play')">▶️</button>
+            <button id="btnNext" class="btn" onclick="sendCmd('next')">⏭️</button>
         </div>
     </div>
 
@@ -183,18 +184,12 @@
         let myPin = localStorage.getItem('dj_pin') || prompt("🔒 Podaj PIN DJ-a:");
         if (myPin) localStorage.setItem('dj_pin', myPin);
 
-        let lastCmdTs = 0;
         let unlockTimeout = null;
+        let isPlaying = false; // Niezależna, twarda flaga dla Play/Pause
 
-        // Odbieranie statusu bazy (BEZ nadpisywania przycisku Play!)
         db.ref('remote_status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
-
-            // NATYCHMIASTOWE ODBLOKOWANIE PRZYCISKÓW PO POTWIERDZENIU Z PC
-            if (data.lastAckTs && data.lastAckTs === lastCmdTs) {
-                unlockButtons();
-            }
 
             uiMode.textContent = data.mode ? `TRYB: ${data.mode.toUpperCase()}` : "";
 
@@ -208,7 +203,8 @@
                 nextKonkursContainer.style.display = 'block';
                 uiNextIdx.textContent = data.nextKonkursIndex || "-";
                 uiNextName.textContent = data.nextName || "-";
-                uiControlPanel.style.display = 'block';
+
+                uiControlPanel.style.display = 'block'; 
             }
             else if (data.mode === 'loteria') {
                 uiMain.style.display = 'none';
@@ -216,7 +212,8 @@
                 uiSub.style.fontSize = '15vw';
                 nextKaraokeContainer.style.display = 'none';
                 nextKonkursContainer.style.display = 'none';
-                uiControlPanel.style.display = 'none';
+
+                uiControlPanel.style.display = 'none'; 
             }
             else {
                 uiMain.style.display = 'none';
@@ -240,39 +237,50 @@
             }
         });
 
-        // Wysyłanie komendy i natychmiastowa reakcja UI na ślepo
-        function sendCmd(action, btnEl) {
+        function sendCmd(action, value = null) {
             if (!myPin) { location.reload(); return; }
 
-            // Natychmiastowa, optymistyczna zmiana ikony Play/Pause po stronie telefonu
-            if (action === 'play' && btnEl) {
-                btnEl.textContent = btnEl.textContent.includes('▶️') ? '⏸️' : '▶️';
+            // Natychmiastowa zmiana ikony (bez czytania emotikon!)
+            if (action === 'play') {
+                isPlaying = !isPlaying;
+                document.getElementById('btnPlay').textContent = isPlaying ? '⏸️' : '▶️';
             }
 
-            // 1. Zablokuj wszystkie przyciski i podświetl kliknięty
-            document.querySelectorAll('.btn').forEach(b => b.disabled = true);
-            if (btnEl) btnEl.classList.add('pressed');
+            // Blokujemy tylko 3 klawisze, aby uniknąć błędów
+            const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext'];
+            buttonsIds.forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.disabled = true;
+            });
 
-            // 2. Wyślij komendę
-            lastCmdTs = Date.now();
-            db.ref('remote_cmd').set({ action: action, pin: myPin, ts: lastCmdTs })
+            // Podświetlenie klikniętego na czerwono
+            let targetBtn = null;
+            if (action === 'prev') targetBtn = document.getElementById('btnPrev');
+            if (action === 'play') targetBtn = document.getElementById('btnPlay');
+            if (action === 'next') targetBtn = document.getElementById('btnNext');
+            if (targetBtn) targetBtn.classList.add('pressed');
+
+            // Wysyłamy w 100% oryginalnym formacie, jaki miałeś przed dzisiejszymi zmianami
+            db.ref('remote_cmd').set({ action: action, value: value, pin: myPin, ts: Date.now() })
                 .catch(e => { localStorage.removeItem('dj_pin'); location.reload(); });
             
             if (navigator.vibrate) navigator.vibrate(40);
 
-            // 3. Fallback: Odblokuj przymusowo po 1.5s (1500 ms)
+            // Awaryjne odblokowanie zmienione na 1,5 sekundy (1500ms)
             clearTimeout(unlockTimeout);
             unlockTimeout = setTimeout(unlockButtons, 1500);
         }
 
-        // Zdejmowanie blokady wizualnej
         function unlockButtons() {
-            document.querySelectorAll('.btn').forEach(b => {
-                b.disabled = false;
-                b.classList.remove('pressed');
+            const buttonsIds = ['btnPrev', 'btnPlay', 'btnNext'];
+            buttonsIds.forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('pressed');
+                }
             });
         }
     </script>
 </body>
-
 </html>
