@@ -178,7 +178,6 @@
         const nextKaraokeContainer = document.getElementById('nextKaraokeContainer');
         const nextKonkursContainer = document.getElementById('nextKonkursContainer');
         const uiControlPanel = document.getElementById('uiControlPanel');
-        const playBtn = document.querySelector('.btn-play');
 
         let myPin = localStorage.getItem('dj_pin') || prompt("🔒 Podaj PIN DJ-a:");
         if (myPin) localStorage.setItem('dj_pin', myPin);
@@ -186,19 +185,12 @@
         let lastCmdTs = 0;
         let unlockTimeout = null;
 
-        // Odbieranie statusu bazy i odtwarzacza
+        // Odbieranie statusu bazy (bez statusu play/pause)
         db.ref('remote_status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
 
             uiMode.textContent = data.mode ? `TRYB: ${data.mode.toUpperCase()}` : "";
-
-            // Dynamiczna ikona Play/Pause
-            if (data.isPlaying) {
-                playBtn.textContent = '⏸️'; // Pauza
-            } else {
-                playBtn.textContent = '▶️'; // Play
-            }
 
             if (data.mode === 'konkurs') {
                 uiMain.style.display = 'block';
@@ -242,9 +234,14 @@
             }
         });
 
-        // Wysyłanie komendy i nakładanie blokady
+        // Wysyłanie komendy i natychmiastowa reakcja UI
         function sendCmd(action, btnEl) {
             if (!myPin) { location.reload(); return; }
+
+            // Natychmiastowa, optymistyczna zmiana ikony Play/Pause!
+            if (action === 'play' && btnEl) {
+                btnEl.textContent = btnEl.textContent.includes('▶️') ? '⏸️' : '▶️';
+            }
 
             // 1. Zablokuj wszystkie przyciski i podświetl kliknięty
             document.querySelectorAll('.btn').forEach(b => b.disabled = true);
