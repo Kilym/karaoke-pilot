@@ -101,16 +101,23 @@
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .btn:active {
-            background: #333;
-            transform: scale(0.95);
+            transition: background 0.1s, transform 0.1s, opacity 0.2s;
         }
 
         .btn-play {
             background: #455a64;
             font-size: 40px;
+        }
+
+        /* --- STYLE DLA BLOKADY I AKTYWACJI --- */
+        .btn.pressed {
+            background: #e53935 !important; /* Świeci na czerwono */
+            transform: scale(0.95);
+        }
+        
+        .btn:disabled {
+            opacity: 0.4;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -119,9 +126,7 @@
 
     <div class="status-display">
         <div id="uiMode" class="mode-label">Inicjalizacja...</div>
-
         <div id="uiMainDisplay" class="big-number">-</div>
-
         <div id="uiSubDisplay" class="huge-title">Czekam na dane</div>
 
         <div id="nextKaraokeContainer">
@@ -143,14 +148,13 @@
 
     <div id="uiControlPanel" class="bottom-panel">
         <div class="controls-grid">
-            <button class="btn" onclick="sendCmd('prev')">⏮️</button>
-            <button class="btn btn-play" onclick="sendCmd('play')">⏯️</button>
-            <button class="btn" onclick="sendCmd('next')">⏭️</button>
+            <button class="btn" onclick="sendCmd('prev', this)">⏮️</button>
+            <button class="btn btn-play" onclick="sendCmd('play', this)">▶️</button>
+            <button class="btn" onclick="sendCmd('next', this)">⏭️</button>
         </div>
     </div>
 
     <script>
-        // UWAGA: Wklej tutaj swoje dane firebaseConfig!
         const firebaseConfig = {
             apiKey: "AIzaSyA7Eam7DIBhHG05gBTNGWuFLs2W8eLfqUo",
             authDomain: "indeksowe-karaoke.firebaseapp.com",
@@ -160,7 +164,6 @@
             messagingSenderId: "456394044590",
             appId: "1:456394044590:web:1978e917b7674e7bd1293f"
         };
-
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -175,15 +178,27 @@
         const nextKaraokeContainer = document.getElementById('nextKaraokeContainer');
         const nextKonkursContainer = document.getElementById('nextKonkursContainer');
         const uiControlPanel = document.getElementById('uiControlPanel');
+        const playBtn = document.querySelector('.btn-play');
 
         let myPin = localStorage.getItem('dj_pin') || prompt("🔒 Podaj PIN DJ-a:");
         if (myPin) localStorage.setItem('dj_pin', myPin);
 
+        let lastCmdTs = 0;
+        let unlockTimeout = null;
+
+        // Odbieranie statusu bazy i odtwarzacza
         db.ref('remote_status').on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
 
             uiMode.textContent = data.mode ? `TRYB: ${data.mode.toUpperCase()}` : "";
+
+            // Dynamiczna ikona Play/Pause
+            if (data.isPlaying) {
+                playBtn.textContent = '⏸️'; // Pauza
+            } else {
+                playBtn.textContent = '▶️'; // Play
+            }
 
             if (data.mode === 'konkurs') {
                 uiMain.style.display = 'block';
@@ -195,8 +210,7 @@
                 nextKonkursContainer.style.display = 'block';
                 uiNextIdx.textContent = data.nextKonkursIndex || "-";
                 uiNextName.textContent = data.nextName || "-";
-
-                uiControlPanel.style.display = 'block'; // Przyciski widoczne w konkursie
+                uiControlPanel.style.display = 'block';
             }
             else if (data.mode === 'loteria') {
                 uiMain.style.display = 'none';
@@ -204,11 +218,9 @@
                 uiSub.style.fontSize = '15vw';
                 nextKaraokeContainer.style.display = 'none';
                 nextKonkursContainer.style.display = 'none';
-
-                uiControlPanel.style.display = 'none'; // UKRYTE w loterii
+                uiControlPanel.style.display = 'none';
             }
             else {
-                // Tryb Karaoke
                 uiMain.style.display = 'none';
                 uiSub.textContent = data.currentName || "Brak utworu";
                 uiSub.style.fontSize = '12vw';
@@ -226,18 +238,45 @@
                         uiQueue.appendChild(div);
                     });
                 }
-
-                uiControlPanel.style.display = 'none'; // UKRYTE w karaoke
+                uiControlPanel.style.display = 'block'; 
             }
         });
 
-        function sendCmd(action, value = null) {
+        // Wysyłanie komendy i nakładanie blokady
+        function sendCmd(action, btnEl) {
             if (!myPin) { location.reload(); return; }
-            db.ref('remote_cmd').set({ action: action, value: value, pin: myPin, ts: Date.now() })
+
+            // 1. Zablokuj wszystkie przyciski i podświetl kliknięty
+            document.querySelectorAll('.btn').forEach(b => b.disabled = true);
+            if (btnEl) btnEl.classList.add('pressed');
+
+            // 2. Wyślij timestamp
+            lastCmdTs = Date.now();
+            db.ref('remote_cmd').set({ action: action, pin: myPin, ts: lastCmdTs })
                 .catch(e => { localStorage.removeItem('dj_pin'); location.reload(); });
+            
             if (navigator.vibrate) navigator.vibrate(40);
+
+            // 3. Fallback: Odblokuj przymusowo po 2.5s (gdyby internet zgubił sygnał zwrotny)
+            clearTimeout(unlockTimeout);
+            unlockTimeout = setTimeout(unlockButtons, 2500);
         }
+
+        // Zdejmowanie blokady wizualnej
+        function unlockButtons() {
+            document.querySelectorAll('.btn').forEach(b => {
+                b.disabled = false;
+                b.classList.remove('pressed');
+            });
+        }
+
+        // Odbieranie sygnału ACK (Potwierdzenie od PC)
+        db.ref('remote_ack').on('value', (snap) => {
+            const ack = snap.val();
+            if (ack && ack.ts === lastCmdTs) {
+                unlockButtons();
+            }
+        });
     </script>
 </body>
-
 </html>
