@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pilot Lite - Karaoke</title>
-    <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
@@ -365,7 +364,6 @@
 
 <body>
 
-    <!-- EKRAN LOGOWANIA -->
     <div id="loginScreen">
         <div class="login-box">
             <h2>Pilot DJ'a (Lite)</h2>
@@ -377,7 +375,6 @@
         </div>
     </div>
 
-    <!-- INTERFEJS LITE -->
     <div id="appInterface" style="display: none; flex-direction: column; height: 100%;">
         <div id="topBar" class="top-bar">
             <button id="btnTabOrders" class="top-btn" onclick="toggleTab('orders')" title="Zamówienia">📦</button>
@@ -399,7 +396,6 @@
             </div>
         </div>
 
-        <!-- ZAKŁADKA HISTORII -->
         <div id="tabHistory" class="panel">
             <div id="historyListRemote" style="text-align: left;">
                 <div style="text-align: center; color: #aaa; padding: 20px;">⏳ Czekam na historię...</div>
@@ -465,7 +461,6 @@
             </div>
         </div>
 
-        <!-- Przycisk w dolnym rogu ekranu (PODNIESIONY) -->
         <button class="reset-btn-floating" onclick="forceUnlockUI()" title="Wymuś zresetowanie blokady UI">
             🔄
         </button>
@@ -676,7 +671,9 @@
                 if (!data) return;
 
                 if (data.mode) currentModeInternal = data.mode;
-                renderOpenTabsList(data.openTabs || []);
+                
+                // UŻYCIE ZBEZPIECZONEJ FUNKCJI RENDEROWANIA
+                renderOpenTabsList(data.openTabs);
 
                 const newTitle = data.currentName || "-";
                 // Definicja "pustej" karty - weryfikujemy w obu trybach
@@ -695,11 +692,12 @@
                     nextKaraokeContainer.style.display = 'flex'; nextKonkursContainer.style.display = 'none'; loteriaContainer.style.display = 'none';
                     uiNext.textContent = data.nextName || "-";
                     uiQueue.innerHTML = '';
-                    if (data.queueList) {
-                        data.queueList.forEach(song => {
-                            const div = document.createElement('div'); div.className = 'queue-item'; div.textContent = song; uiQueue.appendChild(div);
-                        });
-                    }
+                    
+                    // BEZPIECZNE POBIERANIE KOLEJKI
+                    const safeQueue = Array.isArray(data.queueList) ? data.queueList : Object.values(data.queueList || {});
+                    safeQueue.forEach(song => {
+                        const div = document.createElement('div'); div.className = 'queue-item'; div.textContent = song; uiQueue.appendChild(div);
+                    });
                 }
                 else if (data.mode === 'konkurs') {
                     uiMain.style.display = 'block'; uiMain.textContent = data.konkursIndex || "1";
@@ -713,8 +711,11 @@
                     nextKaraokeContainer.style.display = 'none'; nextKonkursContainer.style.display = 'none'; loteriaContainer.style.display = 'block';
 
                     const winnersList = document.getElementById('winnersListRemote'); winnersList.innerHTML = '';
-                    if (data.winners && data.winners.length > 0) {
-                        data.winners.forEach(w => {
+                    
+                    // BEZPIECZNE POBIERANIE ZWYCIĘZCÓW
+                    const safeWinners = Array.isArray(data.winners) ? data.winners : Object.values(data.winners || {});
+                    if (safeWinners.length > 0) {
+                        safeWinners.forEach(w => {
                             winnersList.innerHTML += `
                                 <li style="background: #2c2c2c; margin-bottom: 8px; padding: 12px; border-radius: 8px; border-left: 4px solid #e91e63;">
                                     <div style="font-weight: bold; font-size: 18px; color: #fff;">${w.name}</div>
@@ -728,18 +729,26 @@
             });
         } // End initApp
 
-        function renderOpenTabsList(tabs) {
+        // ZABEZPIECZONA FUNKCJA RENDEROWANIA KART
+        function renderOpenTabsList(rawTabs) {
             const container = document.getElementById('openTabsContainer');
             if (!container) return;
-            if (!tabs || tabs.length === 0) { container.innerHTML = '<div style="text-align: center; color: #aaa; padding: 20px;">Brak otwartych kart z muzyką.</div>'; return; }
+            
+            // Konwersja obiektu na tablicę, jeśli Firebase po drodze zgubił strukturę
+            const safeTabs = Array.isArray(rawTabs) ? rawTabs : Object.values(rawTabs || {});
+
+            if (safeTabs.length === 0) { 
+                container.innerHTML = '<div style="text-align: center; color: #aaa; padding: 20px;">Brak otwartych kart z muzyką.</div>'; 
+                return; 
+            }
 
             let html = '';
-            tabs.forEach((t, i) => {
+            safeTabs.forEach((t, i) => {
                 html += `
                 <div style="background: #2c2c2c; margin-bottom: 6px; padding: 8px 10px; border-radius: 8px; display:flex; align-items:center; gap: 10px;">
                     <div style="display:flex; flex-direction:column; gap: 3px;">
                         <button class="tiny-btn" onclick="sendCmd('move_tab', {id: ${t.id}, dir: -1})" ${i === 0 ? 'disabled' : ''} title="Wyżej">▲</button>
-                        <button class="tiny-btn" onclick="sendCmd('move_tab', {id: ${t.id}, dir: 1})" ${i === tabs.length - 1 ? 'disabled' : ''} title="Niżej">▼</button>
+                        <button class="tiny-btn" onclick="sendCmd('move_tab', {id: ${t.id}, dir: 1})" ${i === safeTabs.length - 1 ? 'disabled' : ''} title="Niżej">▼</button>
                     </div>
                     <div style="flex:1; word-break: break-word; white-space: normal; font-size:13px; font-weight:bold; line-height: 1.2;">${t.title}</div>
                     <button class="tiny-btn" style="background:#4CAF50; padding:10px 10px; font-size:16px;" onclick="sendCmd('move_tab_top', ${t.id})" ${i === 0 ? 'disabled' : ''} title="Przesuń na samą górę">⏫</button>
